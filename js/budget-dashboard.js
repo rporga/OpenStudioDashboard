@@ -61,7 +61,9 @@
     const usedKnown = rows.filter((row) => Calc.hasValue(row.used_so_far_usd000)).length;
     const splitKnown = rows.filter((row) => Calc.hasValue(row.studio_budget_usd000) && Calc.hasValue(row.kol_budget_usd000)).length;
     const priorBudget = Calc.nullableSum(rows.map((row) => row.prior_year_nestle_budget_usd000));
-    const priorApproved = Calc.nullableSum(rows.map((row) => row.prior_year_approved_am_net_fee_usd000));
+    const approvedComparable = rows.filter((row) => Calc.hasValue(row.approved_am_net_fee_usd000) && Calc.hasValue(row.prior_year_approved_am_net_fee_usd000));
+    const comparablePriorApproved = Calc.nullableSum(approvedComparable.map((row) => row.prior_year_approved_am_net_fee_usd000));
+    const comparableCurrentApproved = Calc.nullableSum(approvedComparable.map((row) => row.approved_am_net_fee_usd000));
     const priorUsed = Calc.nullableSum(rows.map((row) => row.prior_year_used_so_far_usd000));
     const priorStudio = Calc.nullableSum(rows.map((row) => row.prior_year_studio_budget_usd000));
     const priorKol = Calc.nullableSum(rows.map((row) => row.prior_year_kol_budget_usd000));
@@ -69,7 +71,10 @@
     const currentSplitTotal = hasSplit ? summary.studio_budget_usd000 + summary.kol_budget_usd000 : null;
     document.getElementById("approved-kpi-label").textContent = summary.approvedComplete ? "Approved in AM" : "Known Approved in AM";
     document.getElementById("kpi-budget-context").textContent = comparisonCopy(priorBudget, percentChange(summary.nestle_budget_usd000, priorBudget));
-    document.getElementById("kpi-approved-context").textContent = Calc.hasValue(priorApproved) ? comparisonCopy(priorApproved, percentChange(summary.approved_am_net_fee_usd000, priorApproved)) : `${approvedKnown} of ${rows.length} reporting · FY2025 comparison awaiting data`;
+    const approvedComparison = comparisonCopy(comparablePriorApproved, percentChange(comparableCurrentApproved, comparablePriorApproved));
+    document.getElementById("kpi-approved-context").textContent = approvedComparable.length
+      ? `${rows.length > 1 ? `${approvedComparable.length} matched market${approvedComparable.length === 1 ? "" : "s"} · ` : ""}${approvedComparison}`
+      : `${approvedKnown} of ${rows.length} reporting · no matched FY2025 comparison`;
     document.getElementById("kpi-used-context").textContent = Calc.hasValue(priorUsed) ? comparisonCopy(priorUsed, percentChange(summary.used_so_far_usd000, priorUsed)) : `${usedKnown} of ${rows.length} reporting · FY2025 comparison awaiting data`;
     document.getElementById("kpi-split-context").textContent = Calc.hasValue(priorSplitTotal) ? `FY2025 Studio/KOL: ${formatMoney(priorStudio, 1)} / ${formatMoney(priorKol, 1)} ${currencyUnit()} · ${comparisonCopy(priorSplitTotal, percentChange(currentSplitTotal, priorSplitTotal)).replace(/^FY2025: [^·]+ · /, "")}` : `${splitKnown} of ${rows.length} reporting · ${currencyUnit()} · FY2025 comparison awaiting data`;
   }
@@ -110,20 +115,36 @@
 
   function initials(name) { return name === "Philippines" ? "PH" : name === "Thailand" ? "TH" : name === "Vietnam" ? "VN" : name === "Malaysia" ? "MY" : name === "India" ? "IN" : name.slice(0, 2).toUpperCase(); }
 
+  function approvedChangeIndicator(row) {
+    const current = row.approved_am_net_fee_usd000;
+    const prior = row.prior_year_approved_am_net_fee_usd000;
+    if (!Calc.hasValue(current) && Calc.hasValue(prior)) return '<span class="change-indicator change-neutral">FY2026 awaiting</span>';
+    if (Calc.hasValue(current) && !Calc.hasValue(prior)) return '<span class="change-indicator change-neutral">FY2025 awaiting</span>';
+    if (!Calc.hasValue(current) || !Calc.hasValue(prior)) return '<span class="change-indicator change-neutral">Awaiting data</span>';
+    const change = percentChange(current, prior);
+    if (!Calc.hasValue(change)) return '<span class="change-indicator change-neutral">Not comparable</span>';
+    const increasing = change >= 0;
+    const direction = increasing ? "increase" : "decrease";
+    const symbol = increasing ? "↑" : "↓";
+    const title = `FY2025: ${formatMoney(prior, 1)} ${currencyUnit()}`;
+    return `<span class="change-indicator change-${direction}" title="${window.DashboardApp.escapeHtml(title)}">${symbol} ${Calc.formatPercent(Math.abs(change), 1)} ${direction}</span>`;
+  }
+
   function renderTable(data, filters, rows) {
     const statuses = Object.fromEntries(data.data_status.map((row) => [row.market_id, row.overall_status]));
     document.getElementById("finance-comparison-body").innerHTML = rows.map((row) => `<tr>
       <td><span class="market-cell"><span class="market-initial">${initials(row.market.name)}</span>${window.DashboardApp.escapeHtml(row.market.name)}</span></td>
       <td class="numeric">${Calc.hasValue(row.nestle_budget_usd000) ? window.DashboardApp.escapeHtml(formatMoney(row.nestle_budget_usd000, 1)) : '<span class="empty-cell">Awaiting data</span>'}</td>
       <td class="numeric">${Calc.hasValue(row.approved_am_net_fee_usd000) ? window.DashboardApp.escapeHtml(formatMoney(row.approved_am_net_fee_usd000, 1)) : '<span class="empty-cell">Awaiting data</span>'}</td>
+      <td>${approvedChangeIndicator(row)}</td>
       <td class="numeric">${Calc.hasValue(row.used_so_far_usd000) ? window.DashboardApp.escapeHtml(formatMoney(row.used_so_far_usd000, 1)) : '<span class="empty-cell">Awaiting data</span>'}</td>
       <td class="numeric">${Calc.hasValue(row.studio_budget_usd000) ? window.DashboardApp.escapeHtml(formatMoney(row.studio_budget_usd000, 1)) : '<span class="empty-cell">Awaiting data</span>'}</td>
       <td class="numeric">${Calc.hasValue(row.kol_budget_usd000) ? window.DashboardApp.escapeHtml(formatMoney(row.kol_budget_usd000, 1)) : '<span class="empty-cell">Awaiting data</span>'}</td>
       <td>${window.DashboardApp.statusBadge(statuses[row.market.id] || "Awaiting data")}</td></tr>`).join("");
     document.getElementById("download-finance").onclick = () => {
       const unit = currencyUnit();
-      const output = [["Studio", `Nestlé Budget ${unit}`, `Approved in AM ${unit}`, `Used So Far ${unit}`, `Studio budget ${unit}`, `KOL budget ${unit}`, `FY2025 Nestlé Budget ${unit}`, "Status"]];
-      rows.forEach((row) => output.push([row.market.name, displayValue(row.nestle_budget_usd000), displayValue(row.approved_am_net_fee_usd000), displayValue(row.used_so_far_usd000), displayValue(row.studio_budget_usd000), displayValue(row.kol_budget_usd000), displayValue(row.prior_year_nestle_budget_usd000), statuses[row.market.id]]));
+      const output = [["Studio", `Nestlé Budget ${unit}`, `Approved in AM FY2026 ${unit}`, `Approved in AM FY2025 ${unit}`, "Approved AM change %", `Used So Far ${unit}`, `Studio budget ${unit}`, `KOL budget ${unit}`, `FY2025 Nestlé Budget ${unit}`, "Status"]];
+      rows.forEach((row) => output.push([row.market.name, displayValue(row.nestle_budget_usd000), displayValue(row.approved_am_net_fee_usd000), displayValue(row.prior_year_approved_am_net_fee_usd000), percentChange(row.approved_am_net_fee_usd000, row.prior_year_approved_am_net_fee_usd000), displayValue(row.used_so_far_usd000), displayValue(row.studio_budget_usd000), displayValue(row.kol_budget_usd000), displayValue(row.prior_year_nestle_budget_usd000), statuses[row.market.id]]));
       window.DashboardApp.downloadCsv(`aoa-finance-fy${String(filters.year).slice(-2)}-${displayCurrency.toLowerCase()}.csv`, output);
     };
   }

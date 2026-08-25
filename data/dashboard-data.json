@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "AOA Content Studio Dashboard",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "generated_at": "2026-08-25",
     "source_updated_at": "2026-08-25",
     "currency_unit": "USD000"
@@ -2154,7 +2154,9 @@
       "budget_change_pct": null,
       "source": "Philippines FY2026 total budget confirmed at USD 773,310.96; AM and used-so-far pending",
       "last_updated": "2026-08-25",
-      "prior_year_approved_am_net_fee_usd000": null,
+      "prior_year_approved_am_net_fee_usd000": 1039.762824,
+      "prior_year_approved_am_net_fee_chf000": 840.552,
+      "prior_year_approved_am_source": "Full AgencyMania Net Fee CHF 2025",
       "prior_year_used_so_far_usd000": null,
       "prior_year_studio_budget_usd000": null,
       "prior_year_kol_budget_usd000": null
@@ -2174,7 +2176,9 @@
       "budget_change_pct": null,
       "source": "Thailand after-discount value including KOL; Approved AM from AgencyMania CHF 352,179.02 converted at 1.237",
       "last_updated": "2026-08-25",
-      "prior_year_approved_am_net_fee_usd000": null,
+      "prior_year_approved_am_net_fee_usd000": 253.239877,
+      "prior_year_approved_am_net_fee_chf000": 204.721,
+      "prior_year_approved_am_source": "Full AgencyMania Net Fee CHF 2025; Indochina mapped to Thailand",
       "prior_year_used_so_far_usd000": null,
       "prior_year_studio_budget_usd000": null,
       "prior_year_kol_budget_usd000": null
@@ -2194,7 +2198,9 @@
       "budget_change_pct": null,
       "source": "Nestlé budget and Approved AM from AgencyMania CHF 92,725.50 converted at 1.237",
       "last_updated": "2026-08-25",
-      "prior_year_approved_am_net_fee_usd000": null,
+      "prior_year_approved_am_net_fee_usd000": 173.052589,
+      "prior_year_approved_am_net_fee_chf000": 139.897,
+      "prior_year_approved_am_source": "Full AgencyMania Net Fee CHF 2025",
       "prior_year_used_so_far_usd000": null,
       "prior_year_studio_budget_usd000": null,
       "prior_year_kol_budget_usd000": null
@@ -2232,8 +2238,10 @@
       "prior_year_nestle_budget_usd000": null,
       "budget_change_pct": null,
       "source": "Nestlé budget source; AM and used-so-far pending",
-      "last_updated": "2026-08-24",
-      "prior_year_approved_am_net_fee_usd000": null,
+      "last_updated": "2026-08-25",
+      "prior_year_approved_am_net_fee_usd000": 712.625804,
+      "prior_year_approved_am_net_fee_chf000": 576.092,
+      "prior_year_approved_am_source": "Full AgencyMania Net Fee CHF 2025",
       "prior_year_used_so_far_usd000": null,
       "prior_year_studio_budget_usd000": null,
       "prior_year_kol_budget_usd000": null
