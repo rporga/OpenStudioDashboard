@@ -14,15 +14,6 @@
   function chart(id, config) { destroy(id); charts[id] = new Chart(document.getElementById(id), config); }
   function toggleEmpty(id, show) { document.getElementById(id).hidden = !show; }
 
-  function renderAlerts(data, rows) {
-    const missingApproved = rows.filter((row) => !Calc.hasValue(row.approved_am_net_fee_usd000)).map((row) => row.market.name);
-    const missingActual = rows.filter((row) => !Calc.hasValue(row.actual_spend_usd000)).map((row) => row.market.name);
-    const alerts = [];
-    if (missingApproved.length) alerts.push(`<div class="data-alert"><span class="alert-mark">!</span><div><strong>Approved AM incomplete:</strong> Awaiting ${window.DashboardApp.escapeHtml(missingApproved.join(", "))}. The known total excludes these studios.</div></div>`);
-    if (missingActual.length) alerts.push(`<div class="data-alert"><span class="alert-mark">!</span><div><strong>Actual spend pending:</strong> Remaining budget cannot be calculated until actual spend is supplied.</div></div>`);
-    document.getElementById("quality-alerts").innerHTML = alerts.join("");
-  }
-
   function setKpi(id, value, decimals = 1) {
     const element = document.getElementById(id);
     const missing = !Calc.hasValue(value);
@@ -30,71 +21,93 @@
     element.classList.toggle("is-missing", missing);
   }
 
-  function formatLocalCurrency(value, currency) {
-    return Calc.hasValue(value) ? `${currency} ${Calc.formatNumber(value, 0)}` : "Awaiting data";
+  function comparisonCopy(priorValue, change) {
+    if (!Calc.hasValue(priorValue)) return "FY2025: Awaiting data · change pending";
+    if (!Calc.hasValue(change)) return `FY2025: ${Calc.formatNumber(priorValue, 1)} · change pending`;
+    const direction = Number(change) >= 0 ? "increase" : "decrease";
+    return `FY2025: ${Calc.formatNumber(priorValue, 1)} · ${Calc.formatPercent(Math.abs(change), 1)} ${direction}`;
+  }
+
+  function percentChange(currentValue, priorValue) {
+    return Calc.hasValue(currentValue) && Number(priorValue) > 0 ? ((Number(currentValue) - Number(priorValue)) / Number(priorValue)) * 100 : null;
   }
 
   function renderKpis(rows, summary) {
-    setKpi("kpi-budget", summary.q2rf_budget_usd000);
+    setKpi("kpi-budget", summary.nestle_budget_usd000);
     setKpi("kpi-approved", summary.approved_am_net_fee_usd000);
-    setKpi("kpi-spend", summary.actual_spend_usd000);
-    setKpi("kpi-remaining", summary.remaining_budget_usd000);
-    setKpi("kpi-studio-budget", summary.studio_budget_usd000);
-    setKpi("kpi-kol-budget", summary.kol_budget_usd000);
+    setKpi("kpi-used", summary.used_so_far_usd000);
+
+    const split = document.getElementById("kpi-split");
+    const hasSplit = Calc.hasValue(summary.studio_budget_usd000) && Calc.hasValue(summary.kol_budget_usd000);
+    split.textContent = hasSplit ? `${Calc.formatNumber(summary.studio_budget_usd000, 1)} / ${Calc.formatNumber(summary.kol_budget_usd000, 1)}` : "Awaiting data";
+    split.classList.toggle("is-missing", !hasSplit);
+
     const approvedKnown = rows.filter((row) => Calc.hasValue(row.approved_am_net_fee_usd000)).length;
-    document.getElementById("approved-kpi-label").textContent = summary.approvedComplete ? "Approved AM Net Fee" : "Known Approved AM Total";
-    document.getElementById("kpi-approved-context").textContent = `${approvedKnown} of ${rows.length} studio${rows.length === 1 ? "" : "s"} reporting · USD000`;
-    document.getElementById("kpi-budget-context").textContent = `${rows.filter((row) => Calc.hasValue(row.q2rf_budget_usd000)).length} of ${rows.length} studios reporting · USD000`;
+    const usedKnown = rows.filter((row) => Calc.hasValue(row.used_so_far_usd000)).length;
+    const splitKnown = rows.filter((row) => Calc.hasValue(row.studio_budget_usd000) && Calc.hasValue(row.kol_budget_usd000)).length;
+    const priorBudget = Calc.nullableSum(rows.map((row) => row.prior_year_nestle_budget_usd000));
+    const priorApproved = Calc.nullableSum(rows.map((row) => row.prior_year_approved_am_net_fee_usd000));
+    const priorUsed = Calc.nullableSum(rows.map((row) => row.prior_year_used_so_far_usd000));
+    const priorStudio = Calc.nullableSum(rows.map((row) => row.prior_year_studio_budget_usd000));
+    const priorKol = Calc.nullableSum(rows.map((row) => row.prior_year_kol_budget_usd000));
+    const priorSplitTotal = Calc.hasValue(priorStudio) && Calc.hasValue(priorKol) ? priorStudio + priorKol : null;
+    const currentSplitTotal = hasSplit ? summary.studio_budget_usd000 + summary.kol_budget_usd000 : null;
+    document.getElementById("approved-kpi-label").textContent = summary.approvedComplete ? "Approved in AM" : "Known Approved in AM";
+    document.getElementById("kpi-budget-context").textContent = comparisonCopy(priorBudget, percentChange(summary.nestle_budget_usd000, priorBudget));
+    document.getElementById("kpi-approved-context").textContent = Calc.hasValue(priorApproved) ? comparisonCopy(priorApproved, percentChange(summary.approved_am_net_fee_usd000, priorApproved)) : `${approvedKnown} of ${rows.length} reporting · FY2025 comparison awaiting data`;
+    document.getElementById("kpi-used-context").textContent = Calc.hasValue(priorUsed) ? comparisonCopy(priorUsed, percentChange(summary.used_so_far_usd000, priorUsed)) : `${usedKnown} of ${rows.length} reporting · FY2025 comparison awaiting data`;
+    document.getElementById("kpi-split-context").textContent = Calc.hasValue(priorSplitTotal) ? `FY2025 Studio/KOL: ${Calc.formatNumber(priorStudio, 1)} / ${Calc.formatNumber(priorKol, 1)} · ${comparisonCopy(priorSplitTotal, percentChange(currentSplitTotal, priorSplitTotal)).replace(/^FY2025: [^·]+ · /, "")}` : `${splitKnown} of ${rows.length} reporting · FY2025 comparison awaiting data`;
   }
 
-  function renderCoverage(rows, summary) {
+  function renderCoverage(rows) {
+    const budgetKnown = rows.filter((row) => Calc.hasValue(row.nestle_budget_usd000)).length;
     const approvedKnown = rows.filter((row) => Calc.hasValue(row.approved_am_net_fee_usd000)).length;
-    const percent = rows.length ? (summary.completeMarkets / rows.length) * 100 : 0;
-    document.getElementById("coverage-title").textContent = `${summary.completeMarkets} of ${rows.length} markets fully complete`;
-    document.getElementById("coverage-copy").textContent = `${approvedKnown} market${approvedKnown === 1 ? " has" : "s have"} an approved AM figure; actual spend and Studio/KOL splits are still pending.`;
+    const usedKnown = rows.filter((row) => Calc.hasValue(row.used_so_far_usd000)).length;
+    const splitKnown = rows.filter((row) => Calc.hasValue(row.studio_budget_usd000) && Calc.hasValue(row.kol_budget_usd000)).length;
+    const supplied = budgetKnown + approvedKnown + usedKnown + splitKnown;
+    const possible = rows.length * 4;
+    const percent = possible ? (supplied / possible) * 100 : 0;
+    document.getElementById("coverage-title").textContent = `${Math.round(percent)}% of selected financial fields available`;
+    document.getElementById("coverage-copy").textContent = `${budgetKnown} Nestlé Budget · ${approvedKnown} Approved in AM · ${usedKnown} Used So Far · ${splitKnown} Studio/KOL split.`;
     document.getElementById("coverage-meter-fill").style.width = `${percent}%`;
-    document.querySelector(".coverage-meter").setAttribute("aria-label", `${Math.round(percent)} percent of selected markets have complete financial data`);
+    document.querySelector(".coverage-meter").setAttribute("aria-label", `${Math.round(percent)} percent of selected financial fields are available`);
   }
 
   function renderCharts(rows) {
     const labels = rows.map((row) => row.market.name);
-    const budget = rows.map((row) => Calc.hasValue(row.q2rf_budget_usd000) ? row.q2rf_budget_usd000 : null);
+    const budget = rows.map((row) => Calc.hasValue(row.nestle_budget_usd000) ? row.nestle_budget_usd000 : null);
     const approved = rows.map((row) => Calc.hasValue(row.approved_am_net_fee_usd000) ? row.approved_am_net_fee_usd000 : null);
-    const spend = rows.map((row) => Calc.hasValue(row.actual_spend_usd000) ? row.actual_spend_usd000 : null);
+    const used = rows.map((row) => Calc.hasValue(row.used_so_far_usd000) ? row.used_so_far_usd000 : null);
     const studioBudget = rows.map((row) => Calc.hasValue(row.studio_budget_usd000) ? row.studio_budget_usd000 : null);
     const kolBudget = rows.map((row) => Calc.hasValue(row.kol_budget_usd000) ? row.kol_budget_usd000 : null);
-    const studioSpend = rows.map((row) => Calc.hasValue(row.studio_spend_usd000) ? row.studio_spend_usd000 : null);
-    const kolSpend = rows.map((row) => Calc.hasValue(row.kol_spend_usd000) ? row.kol_spend_usd000 : null);
-    const remaining = rows.map((row) => Calc.hasValue(row.remaining_budget_usd000) ? row.remaining_budget_usd000 : null);
 
-    chart("budget-approved-chart", { type: "bar", data: { labels, datasets: [{ label: "Q2RF budget", data: budget, backgroundColor: C.navy, borderRadius: 7, maxBarThickness: 42 }, { label: "Approved AM fee", data: approved, backgroundColor: C.coral, borderRadius: 7, maxBarThickness: 42 }] }, options: options() });
+    chart("budget-approved-chart", { type: "bar", data: { labels, datasets: [{ label: "Nestlé Budget", data: budget, backgroundColor: C.navy, borderRadius: 7, maxBarThickness: 42 }, { label: "Approved in AM", data: approved, backgroundColor: C.coral, borderRadius: 7, maxBarThickness: 42 }] }, options: options() });
     toggleEmpty("budget-approved-empty", !budget.some(Calc.hasValue) && !approved.some(Calc.hasValue));
     const missing = rows.filter((row) => !Calc.hasValue(row.approved_am_net_fee_usd000)).map((row) => row.market.name);
-    document.getElementById("budget-approved-note").textContent = missing.length ? `No approved fee yet: ${missing.join(", ")}. Missing bars are not zero.` : "Approved AM coverage is complete for this view.";
+    document.getElementById("budget-approved-note").textContent = missing.length ? `Approved AM awaiting: ${missing.join(", ")}. Missing bars are not zero.` : "Approved AM coverage is complete for this view.";
 
-    chart("budget-spend-chart", { type: "bar", data: { labels, datasets: [{ label: "Q2RF budget", data: budget, backgroundColor: C.navy, borderRadius: 7, maxBarThickness: 42 }, { label: "Actual spend", data: spend, backgroundColor: C.teal, borderRadius: 7, maxBarThickness: 42 }] }, options: options() });
-    toggleEmpty("budget-spend-empty", !spend.some(Calc.hasValue));
+    chart("budget-spend-chart", { type: "bar", data: { labels, datasets: [{ label: "Nestlé Budget", data: budget, backgroundColor: C.navy, borderRadius: 7, maxBarThickness: 42 }, { label: "Used So Far", data: used, backgroundColor: C.teal, borderRadius: 7, maxBarThickness: 42 }] }, options: options() });
+    toggleEmpty("budget-spend-empty", !used.some(Calc.hasValue));
+
     chart("budget-split-chart", { type: "bar", data: { labels, datasets: [{ label: "Studio budget", data: studioBudget, backgroundColor: C.navy, borderRadius: 4 }, { label: "KOL budget", data: kolBudget, backgroundColor: C.purple, borderRadius: 4 }] }, options: options(true) });
     toggleEmpty("budget-split-empty", !studioBudget.some(Calc.hasValue) && !kolBudget.some(Calc.hasValue));
-    chart("spend-split-chart", { type: "bar", data: { labels, datasets: [{ label: "Studio spend", data: studioSpend, backgroundColor: C.teal, borderRadius: 4 }, { label: "KOL spend", data: kolSpend, backgroundColor: C.gold, borderRadius: 4 }] }, options: options(true) });
-    toggleEmpty("spend-split-empty", !studioSpend.some(Calc.hasValue) && !kolSpend.some(Calc.hasValue));
-    chart("remaining-chart", { type: "bar", data: { labels, datasets: [{ label: "Remaining budget", data: remaining, backgroundColor: C.blue, borderRadius: 7, maxBarThickness: 50 }] }, options: options() });
-    toggleEmpty("remaining-empty", !remaining.some(Calc.hasValue));
   }
 
-  function initials(name) { return name === "Philippines" ? "PH" : name === "Thailand" ? "TH" : name === "Vietnam" ? "VN" : name === "Malaysia" ? "MY" : name.slice(0, 2).toUpperCase(); }
+  function initials(name) { return name === "Philippines" ? "PH" : name === "Thailand" ? "TH" : name === "Vietnam" ? "VN" : name === "Malaysia" ? "MY" : name === "India" ? "IN" : name.slice(0, 2).toUpperCase(); }
 
   function renderTable(data, filters, rows) {
     const statuses = Object.fromEntries(data.data_status.map((row) => [row.market_id, row.overall_status]));
-    const localOrUsd = (row, usdField, localField) => Calc.hasValue(row[usdField])
-      ? window.DashboardApp.valueCell(row[usdField], 1)
-      : (row.local_currency && Calc.hasValue(row[localField]) ? `<span class="local-value">${formatLocalCurrency(row[localField], row.local_currency)}</span>` : window.DashboardApp.valueCell(null, 1));
     document.getElementById("finance-comparison-body").innerHTML = rows.map((row) => `<tr>
       <td><span class="market-cell"><span class="market-initial">${initials(row.market.name)}</span>${window.DashboardApp.escapeHtml(row.market.name)}</span></td>
-      <td class="numeric">${localOrUsd(row, "q2rf_budget_usd000", "q2rf_budget_local")}</td><td class="numeric">${window.DashboardApp.valueCell(row.approved_am_net_fee_usd000, 1)}</td><td class="numeric">${window.DashboardApp.valueCell(row.actual_spend_usd000, 1)}</td><td class="numeric">${window.DashboardApp.valueCell(row.remaining_budget_usd000, 1)}</td><td class="numeric">${localOrUsd(row, "studio_budget_usd000", "studio_budget_local")}</td><td class="numeric">${localOrUsd(row, "kol_budget_usd000", "kol_budget_local")}</td><td>${window.DashboardApp.statusBadge(statuses[row.market.id] || "Awaiting data")}</td></tr>`).join("");
+      <td class="numeric">${window.DashboardApp.valueCell(row.nestle_budget_usd000, 1)}</td>
+      <td class="numeric">${window.DashboardApp.valueCell(row.approved_am_net_fee_usd000, 1)}</td>
+      <td class="numeric">${window.DashboardApp.valueCell(row.used_so_far_usd000, 1)}</td>
+      <td class="numeric">${window.DashboardApp.valueCell(row.studio_budget_usd000, 1)}</td>
+      <td class="numeric">${window.DashboardApp.valueCell(row.kol_budget_usd000, 1)}</td>
+      <td>${window.DashboardApp.statusBadge(statuses[row.market.id] || "Awaiting data")}</td></tr>`).join("");
     document.getElementById("download-finance").onclick = () => {
-      const output = [["Studio", "Q2RF budget USD000", "Approved AM Net Fee USD000", "Actual spend USD000", "Remaining budget USD000", "Studio budget USD000", "KOL budget USD000", "Local currency", "Budget local", "Studio budget local", "KOL budget local", "Status"]];
-      rows.forEach((row) => output.push([row.market.name, row.q2rf_budget_usd000, row.approved_am_net_fee_usd000, row.actual_spend_usd000, row.remaining_budget_usd000, row.studio_budget_usd000, row.kol_budget_usd000, row.local_currency, row.q2rf_budget_local, row.studio_budget_local, row.kol_budget_local, statuses[row.market.id]]));
+      const output = [["Studio", "Nestlé Budget USD000", "Approved in AM USD000", "Used So Far USD000", "Studio budget USD000", "KOL budget USD000", "FY2025 Nestlé Budget USD000", "Status"]];
+      rows.forEach((row) => output.push([row.market.name, row.nestle_budget_usd000, row.approved_am_net_fee_usd000, row.used_so_far_usd000, row.studio_budget_usd000, row.kol_budget_usd000, row.prior_year_nestle_budget_usd000, statuses[row.market.id]]));
       window.DashboardApp.downloadCsv(`aoa-finance-fy${String(filters.year).slice(-2)}.csv`, output);
     };
   }
@@ -103,7 +116,7 @@
     const { data, filters } = window.DashboardApp;
     const rows = Calc.financeByMarket(data, filters);
     const summary = Calc.financeSummary(rows);
-    renderAlerts(data, rows); renderKpis(rows, summary); renderCoverage(rows, summary); renderCharts(rows); renderTable(data, filters, rows);
+    renderKpis(rows, summary); renderCoverage(rows); renderCharts(rows); renderTable(data, filters, rows);
   }
 
   window.addEventListener("dashboardDataReady", render);

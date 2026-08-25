@@ -28,7 +28,7 @@
   }
 
   function readStoredFilters() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch (_) { return {}; }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; }
   }
 
   function initialFilters(data) {

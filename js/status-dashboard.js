@@ -17,21 +17,16 @@
     document.getElementById("status-coverage-fill").style.width = `${percent}%`;
   }
 
-  function renderAlerts(data, filters) {
-    const issues = data.quality_issues.filter((issue) => filters.market === "all" || issue.market_id === filters.market);
-    document.getElementById("status-quality-alerts").innerHTML = issues.map((issue) => `<div class="data-alert"><span class="alert-mark">!</span><div><strong>${window.DashboardApp.escapeHtml(issue.type)} · ${window.DashboardApp.escapeHtml(data.markets.find((market) => market.id === issue.market_id)?.name)}:</strong> ${window.DashboardApp.escapeHtml(issue.message)}</div></div>`).join("");
-  }
-
   function renderTable(data, filters, rows) {
     const markets = marketMap(data);
-    const fields = ["asset_data_status", "typology_status", "asset_type_status", "budget_status", "approved_am_status", "actual_spend_status", "kol_status"];
+    const fields = ["asset_data_status", "fy_scope_status", "status_breakdown_status", "typology_status", "asset_type_status", "budget_status", "approved_am_status", "used_so_far_status", "studio_kol_status"];
     document.getElementById("data-status-body").innerHTML = rows.map((row) => {
       const market = markets[row.market_id];
       return `<tr><td><span class="market-cell"><span class="market-initial">${initials(market.name)}</span>${window.DashboardApp.escapeHtml(market.name)}</span></td>${fields.map((field) => `<td>${window.DashboardApp.statusBadge(row[field])}</td>`).join("")}<td>${window.DashboardApp.formatDate(row.last_updated)}</td><td>${window.DashboardApp.escapeHtml(row.notes)}</td></tr>`;
     }).join("");
     document.getElementById("download-status").onclick = () => {
-      const output = [["Studio", "Assets", "Typology", "Creation / adaptation", "Budget", "Approved AM", "Actual spend", "KOL", "Overall", "Last updated", "Notes"]];
-      rows.forEach((row) => output.push([markets[row.market_id].name, row.asset_data_status, row.typology_status, row.asset_type_status, row.budget_status, row.approved_am_status, row.actual_spend_status, row.kol_status, row.overall_status, row.last_updated, row.notes]));
+      const output = [["Studio", "Current volume", "FY scope", "Status breakdown", "Typology", "Asset type", "Nestlé Budget", "Approved in AM", "Used So Far", "Studio/KOL split", "Overall", "Last updated", "Notes"]];
+      rows.forEach((row) => output.push([markets[row.market_id].name, row.asset_data_status, row.fy_scope_status, row.status_breakdown_status, row.typology_status, row.asset_type_status, row.budget_status, row.approved_am_status, row.used_so_far_status, row.studio_kol_status, row.overall_status, row.last_updated, row.notes]));
       window.DashboardApp.downloadCsv(`aoa-data-status-fy${String(filters.year).slice(-2)}.csv`, output);
     };
   }
@@ -39,7 +34,7 @@
   function render() {
     const { data, filters } = window.DashboardApp;
     const rows = selectedRows(data, filters);
-    renderSummary(rows); renderAlerts(data, filters); renderTable(data, filters, rows);
+    renderSummary(rows); renderTable(data, filters, rows);
   }
   window.addEventListener("dashboardDataReady", render);
   window.addEventListener("dashboardFiltersChanged", render);
