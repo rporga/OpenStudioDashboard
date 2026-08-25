@@ -4,6 +4,7 @@
   const Calc = window.DashboardCalc;
   const TAT_STORAGE_KEY = "aoa-content-studio-dashboard-tat-view";
   const tatState = { view: "assets", metric: "median", includeLongRunning: false };
+  let insightCycle = 0;
 
   function destroyChart(id) {
     if (charts[id]) { charts[id].destroy(); delete charts[id]; }
@@ -36,7 +37,7 @@
   }
 
   function renderInsights(data, filters, byMarket) {
-    const insights = window.DashboardInsights.generate(data, filters, byMarket);
+    const insights = window.DashboardInsights.generate(data, filters, byMarket, insightCycle);
     const context = filters.market === "all"
       ? "All Studios"
       : (data.markets.find((market) => market.id === filters.market)?.name || "Selected studio");
@@ -49,6 +50,16 @@
         <span class="insight-rank">${String(index + 1).padStart(2, "0")}</span>
         <div><strong>${window.DashboardApp.escapeHtml(insight.title)}</strong><p>${window.DashboardApp.escapeHtml(insight.copy)}</p></div>
       </article>`).join("");
+  }
+
+  function bindInsightControls() {
+    document.getElementById("regenerate-insights").addEventListener("click", (event) => {
+      insightCycle += 1;
+      event.currentTarget.classList.remove("is-spinning");
+      requestAnimationFrame(() => event.currentTarget.classList.add("is-spinning"));
+      const { data, filters } = window.DashboardApp;
+      renderInsights(data, filters, Calc.assetsByMarket(data, filters));
+    });
   }
 
   function renderKpis(data, filters, byMarket) {
@@ -94,14 +105,12 @@
     const planChange = summary.planYoyChange;
     const priorScope = filters.market === "all" ? summary.comparablePlanHistory : byMarket[0].history?.assets_delivered;
     scopeCard.classList.remove("trend-up", "trend-down", "trend-flat");
-    if (Calc.hasValue(planChange)) {
+    if (filters.market !== "all" && Calc.hasValue(planChange)) {
       const direction = Number(planChange) > 0 ? "up" : Number(planChange) < 0 ? "down" : "flat";
       const arrow = direction === "up" ? "↑" : direction === "down" ? "↓" : "—";
       const movement = direction === "up" ? "increase" : direction === "down" ? "decrease" : "no change";
       scopeCard.classList.add(`trend-${direction}`);
-      scopeContext.innerHTML = filters.market === "all"
-        ? `${summary.knownPlanMarkets} of ${data.markets.length} scopes known · <span class="trend-copy trend-${direction}">${arrow} ${Calc.formatPercent(Math.abs(planChange), 1)} ${movement}</span> in ${summary.planComparisonMarkets} comparable studio${summary.planComparisonMarkets === 1 ? "" : "s"}`
-        : `<span class="trend-copy trend-${direction}">${arrow} ${Calc.formatPercent(Math.abs(planChange), 1)} ${movement}</span> vs FY2025 · ${Calc.formatNumber(priorScope)} assets`;
+      scopeContext.innerHTML = `<span class="trend-copy trend-${direction}">${arrow} ${Calc.formatPercent(Math.abs(planChange), 1)} ${movement}</span> vs FY2025 · ${Calc.formatNumber(priorScope)} assets`;
     } else if (Calc.hasValue(summary.planned)) {
       scopeContext.textContent = filters.market === "all"
         ? `${summary.knownPlanMarkets} of ${data.markets.length} studios with confirmed scope`
@@ -372,6 +381,6 @@
     }
   }
 
-  window.addEventListener("dashboardDataReady", () => { bindTatControls(); render(); });
-  window.addEventListener("dashboardFiltersChanged", render);
+  window.addEventListener("dashboardDataReady", () => { bindTatControls(); bindInsightControls(); render(); });
+  window.addEventListener("dashboardFiltersChanged", () => { insightCycle = 0; render(); });
 })();

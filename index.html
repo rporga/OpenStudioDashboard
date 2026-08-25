@@ -40,7 +40,12 @@
       <section id="insights-panel" class="insights-panel" aria-labelledby="insights-title">
         <div class="insights-heading">
           <div><p class="panel-kicker">Dynamic readout</p><h2 id="insights-title">Key takeaways</h2></div>
-          <span id="insights-context">Updates with filters</span>
+          <div class="insights-actions">
+            <span id="insights-context">Updates with filters</span>
+            <button id="regenerate-insights" class="regenerate-button" type="button" aria-label="Regenerate key takeaways">
+              <span aria-hidden="true">↻</span> Regenerate takeaways
+            </button>
+          </div>
         </div>
         <div id="asset-insights" class="insights-grid" aria-live="polite"></div>
       </section>

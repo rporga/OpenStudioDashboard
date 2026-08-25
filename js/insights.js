@@ -53,7 +53,22 @@
     );
   }
 
-  function marketInsights(filters, row) {
+  function paceInsight(summary) {
+    if (!summary.currentVolume || !Calc.hasValue(summary.monthlyAverage)) return null;
+    return item(
+      `${Calc.formatNumber(summary.monthlyAverage, 1)} assets delivered per elapsed month`,
+      `${Calc.formatNumber(summary.currentVolume)} assets are recorded across ${summary.elapsedMonths} elapsed month${summary.elapsedMonths === 1 ? "" : "s"}. This is a delivery pace, not a full-year forecast.`,
+      "neutral"
+    );
+  }
+
+  function rotateInsights(insights, cycle = 0, limit = 4) {
+    if (insights.length <= limit) return insights.slice(0, limit);
+    const start = ((Number(cycle) || 0) * limit) % insights.length;
+    return Array.from({ length: limit }, (_, index) => insights[(start + index) % insights.length]);
+  }
+
+  function marketInsights(filters, row, cycle = 0) {
     const { summary, history, plan, market } = row;
     const fullView = filters.quarter === "all" && filters.typology === "all";
     if (!row.hasCurrentVolume && Calc.hasValue(summary.planned)) return [item(
@@ -113,16 +128,20 @@
     if (status) insights.push(status);
     const mix = mixInsight(summary);
     if (mix) insights.push(mix);
-    return insights.slice(0, 4);
+    const pace = paceInsight(summary);
+    if (pace) insights.push(pace);
+    return rotateInsights(insights, cycle);
   }
 
-  function portfolioInsights(data, filters, rows) {
+  function portfolioInsights(data, filters, rows, cycle = 0) {
     const summary = Calc.portfolioAssetSummary(rows, data, filters);
     const fullView = filters.quarter === "all" && filters.typology === "all";
     const insights = [];
     if (!summary.currentVolume) return [item("No current volume for this selection", "Adjust the filters or add matching market data.")];
 
-    if (fullView && Calc.hasValue(summary.planYoyChange)) {
+    const completeComparison = summary.knownPlanMarkets === data.markets.length
+      && summary.planComparisonMarkets === data.markets.length;
+    if (fullView && completeComparison && Calc.hasValue(summary.planYoyChange)) {
       const change = summary.planYoyChange;
       const lower = change < 0;
       const flat = change === 0;
@@ -130,6 +149,12 @@
         flat ? "Comparable FY2026 scope is unchanged from FY2025" : `Comparable FY2026 scope is ${Calc.formatPercent(Math.abs(change), 1)} ${lower ? "lower" : "higher"} than FY2025`,
         `${Calc.formatNumber(summary.comparablePlanTotal)} planned assets versus ${Calc.formatNumber(summary.comparablePlanHistory)} across ${summary.planComparisonMarkets} comparable studio${summary.planComparisonMarkets === 1 ? "" : "s"}. ${Calc.formatNumber(summary.planned)} total FY2026 scope is currently known across ${summary.knownPlanMarkets} studios.`,
         flat ? "neutral" : lower ? "decrease" : "increase"
+      ));
+    } else if (fullView && Calc.hasValue(summary.planned)) {
+      insights.push(item(
+        `FY2026 scope is confirmed for ${summary.knownPlanMarkets} of ${data.markets.length} studios`,
+        `${Calc.formatNumber(summary.planned)} planned assets are currently known. An overall increase or decrease will only be shown when every studio has comparable FY2025 and FY2026 data.`,
+        "scope"
       ));
     } else {
       insights.push(item(
@@ -161,12 +186,21 @@
 
     const mix = mixInsight(summary);
     if (mix) insights.push(mix);
-    return insights.slice(0, 4);
+    const pace = paceInsight(summary);
+    if (pace) insights.push(pace);
+
+    const reportingMarkets = rows.filter((row) => row.hasCurrentVolume).length;
+    insights.push(item(
+      `${reportingMarkets} of ${data.markets.length} studios have current asset volume`,
+      `${data.markets.length - reportingMarkets} studio${data.markets.length - reportingMarkets === 1 ? " is" : "s are"} still awaiting current delivery data. Portfolio totals only include supplied values.`,
+      reportingMarkets === data.markets.length ? "positive" : "neutral"
+    ));
+    return rotateInsights(insights, cycle);
   }
 
-  function generate(data, filters, rows) {
-    return filters.market === "all" ? portfolioInsights(data, filters, rows) : marketInsights(filters, rows[0]);
+  function generate(data, filters, rows, cycle = 0) {
+    return filters.market === "all" ? portfolioInsights(data, filters, rows, cycle) : marketInsights(filters, rows[0], cycle);
   }
 
-  window.DashboardInsights = { generate, absoluteChange, statusInsight, mixInsight };
+  window.DashboardInsights = { generate, absoluteChange, statusInsight, mixInsight, paceInsight, rotateInsights };
 })();
