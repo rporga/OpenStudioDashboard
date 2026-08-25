@@ -1,7 +1,9 @@
 (function () {
-  const requiredCollections = ["markets", "assets", "finance", "data_status"];
+  const requiredCollections = ["markets", "assets", "asset_plans", "historical_assets", "finance", "data_status"];
   const requiredAssetFields = ["fiscal_year", "month", "quarter", "market_id", "content_typology", "asset_type", "delivery_status", "asset_volume"];
-  const requiredFinanceFields = ["fiscal_year", "market_id", "q2rf_budget_usd000", "approved_am_net_fee_usd000", "actual_spend_usd000"];
+  const requiredPlanFields = ["fiscal_year", "market_id", "fy_planned_assets", "current_tracker_volume", "utilization_pct"];
+  const requiredHistoryFields = ["market_id", "period_label", "assets_delivered", "comparable_to_current", "comparable_to_plan"];
+  const requiredFinanceFields = ["fiscal_year", "market_id", "nestle_budget_usd000", "approved_am_net_fee_usd000", "used_so_far_usd000", "prior_year_nestle_budget_usd000", "prior_year_approved_am_net_fee_usd000", "prior_year_used_so_far_usd000", "prior_year_studio_budget_usd000", "prior_year_kol_budget_usd000"];
   const requiredTatFields = ["brief_id", "fiscal_year", "delivery_quarter", "market_id", "brief_date", "delivery_date", "content_typologies", "asset_type_group", "turnaround_days", "scope_class"];
 
   function isPresent(value) {
@@ -21,6 +23,18 @@
       });
       if (!marketIds.has(record.market_id)) throw new Error(`Asset record ${index + 1} uses an unknown market.`);
       if (!Number.isFinite(Number(record.asset_volume))) throw new Error(`Asset record ${index + 1} has an invalid volume.`);
+    });
+    data.asset_plans.forEach((record, index) => {
+      requiredPlanFields.forEach((field) => {
+        if (!(field in record)) throw new Error(`Asset plan ${index + 1} is missing “${field}”.`);
+      });
+      if (!marketIds.has(record.market_id)) throw new Error(`Asset plan ${index + 1} uses an unknown market.`);
+    });
+    data.historical_assets.forEach((record, index) => {
+      requiredHistoryFields.forEach((field) => {
+        if (!(field in record)) throw new Error(`Historical asset record ${index + 1} is missing “${field}”.`);
+      });
+      if (!marketIds.has(record.market_id)) throw new Error(`Historical asset record ${index + 1} uses an unknown market.`);
     });
     data.finance.forEach((record, index) => {
       requiredFinanceFields.forEach((field) => {

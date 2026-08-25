@@ -15,7 +15,7 @@
       <div>
         <p class="eyebrow">AOA Content Studio Dashboard</p>
         <h1>Assets &amp; utilization</h1>
-        <p class="intro-copy">Track delivery progress, output mix and how each studio is using its FY26 asset volume.</p>
+        <p class="intro-copy">Track Procurement deliverables, output mix and progress against confirmed full-year plans.</p>
       </div>
       <div class="updated-block"><span>Source updated</span><strong id="source-updated">—</strong></div>
     </section>
@@ -26,8 +26,6 @@
     <section id="error-state" class="state-card state-error" hidden></section>
 
     <div id="dashboard-content" hidden>
-      <section id="quality-alerts" class="alert-stack" aria-label="Data quality notices"></section>
-
       <section class="dashboard-view-switch" aria-label="Asset dashboard view">
         <div>
           <span class="switch-label">Dashboard view</span>
@@ -39,43 +37,50 @@
         </div>
       </section>
 
+      <section id="insights-panel" class="insights-panel" aria-labelledby="insights-title">
+        <div class="insights-heading">
+          <div><p class="panel-kicker">Dynamic readout</p><h2 id="insights-title">Key takeaways</h2></div>
+          <span id="insights-context">Updates with filters</span>
+        </div>
+        <div id="asset-insights" class="insights-grid" aria-live="polite"></div>
+      </section>
+
       <div id="asset-view">
 
-      <section class="kpi-grid" aria-label="Asset performance summary">
-        <article class="kpi-card kpi-primary"><div class="kpi-top"><span id="kpi-total-label">Total FY assets</span><button class="info-button" data-tip="Delivered asset totals use dated tracker records. A confirmed plan is shown separately when delivery data is not yet available." aria-label="About total FY assets">i</button></div><strong id="kpi-total-assets">—</strong><small id="kpi-total-context">Selected view</small></article>
-        <article class="kpi-card"><div class="kpi-top"><span>Completed / used</span><button class="info-button" data-tip="Assets marked Completed in the selected fiscal year and filters." aria-label="About completed assets">i</button></div><strong id="kpi-completed">—</strong><small id="kpi-completed-context">Of FY volume</small></article>
-        <article class="kpi-card"><div class="kpi-top"><span>Delivery utilization</span><button class="info-button" data-tip="Completed assets divided by total FY assets." aria-label="About delivery utilization">i</button></div><strong id="kpi-utilization">—</strong><div class="mini-progress"><span id="utilization-bar"></span></div><small>Completed ÷ FY assets</small></article>
-        <article class="kpi-card"><div class="kpi-top"><span>Average monthly delivery</span><button class="info-button" data-tip="Completed assets divided by elapsed months in the selected fiscal year; historical years use 12 months." aria-label="About monthly average">i</button></div><strong id="kpi-monthly-average">—</strong><small id="kpi-month-context">Across elapsed months</small></article>
-        <article class="kpi-card"><div class="kpi-top"><span>Asset creation</span><button class="info-button" data-tip="Assets explicitly classified as Asset Creation. Other asset types remain separate." aria-label="About asset creation">i</button></div><strong id="kpi-creation">—</strong><small id="kpi-creation-share">—</small></article>
-        <article class="kpi-card"><div class="kpi-top"><span>Asset adaptation</span><button class="info-button" data-tip="Assets explicitly classified as Asset Adaptation. Localization and transcreation are not included." aria-label="About asset adaptation">i</button></div><strong id="kpi-adaptation">—</strong><small id="kpi-adaptation-share">—</small></article>
+      <section class="kpi-grid asset-kpi-grid" aria-label="Asset performance summary">
+        <article id="fy-scope-card" class="kpi-card kpi-primary"><div class="kpi-top"><span>Total Assets FY2026</span><button class="info-button" data-tip="The confirmed full-year planned asset scope. A missing plan remains Awaiting data and is never treated as zero." aria-label="About total assets FY2026">i</button></div><strong id="kpi-fy-scope">—</strong><small id="kpi-fy-scope-context">Confirmed full-year scope</small></article>
+        <article class="kpi-card"><div class="kpi-top"><span>Assets delivered</span><button class="info-button" data-tip="All Procurement quantities currently recorded in the tracker, across Completed, On-Track, Delayed, Not Started and unclassified statuses." aria-label="About assets delivered">i</button></div><strong id="kpi-delivered">—</strong><small id="kpi-delivered-context">Selected view</small></article>
+        <article class="kpi-card"><div class="kpi-top"><span>Utilization Percentage</span><button class="info-button" data-tip="Assets delivered divided by confirmed full-year scope. It remains unavailable until both figures are supplied." aria-label="About utilization percentage">i</button></div><strong id="kpi-utilization">—</strong><div class="mini-progress"><span id="utilization-bar"></span></div><small id="kpi-utilization-context">Delivered ÷ FY scope</small></article>
+        <article class="kpi-card"><div class="kpi-top"><span>Average Monthly Delivery</span><button class="info-button" data-tip="Assets delivered divided by elapsed reporting months. This is a pace indicator, not a full-year forecast." aria-label="About average monthly delivery">i</button></div><strong id="kpi-monthly-average">—</strong><small id="kpi-month-context">Across elapsed months</small></article>
+        <article class="kpi-card"><div class="kpi-top"><span>Creation vs Adaptation + Others</span><button class="info-button" data-tip="Creation compared with adaptation plus localization, transcreation, compositioning, versioning and unclassified output." aria-label="About creation versus adaptation and others">i</button></div><strong id="kpi-creation-mix">—</strong><small id="kpi-creation-mix-context">Creation / Adaptation + Others</small></article>
       </section>
 
       <section class="chart-grid">
         <article class="panel panel-wide">
-          <div class="panel-heading"><div><p class="panel-kicker">Delivery progress</p><h2>FY assets vs completed</h2></div><span class="legend-note">Volume by studio</span></div>
-          <div class="chart-wrap chart-medium"><canvas id="assets-completed-chart" aria-label="FY assets versus completed assets by studio"></canvas></div>
+          <div class="panel-heading"><div><p class="panel-kicker">Scope utilization</p><h2>Current tracker volume vs FY scope</h2></div><span class="legend-note">Scope shown only when confirmed</span></div>
+          <div class="chart-wrap chart-medium"><canvas id="assets-completed-chart" aria-label="Current tracker volume versus full-year scope by studio"></canvas></div>
         </article>
         <article class="panel">
-          <div class="panel-heading"><div><p class="panel-kicker">Delivery pace</p><h2>Monthly asset delivery</h2></div><span class="legend-note">All statuses</span></div>
-          <div class="chart-wrap"><canvas id="monthly-chart" aria-label="Monthly asset delivery trend"></canvas></div>
+          <div class="panel-heading"><div><p class="panel-kicker">Recorded pace</p><h2>Monthly tracker volume</h2></div><span id="monthly-chart-note" class="legend-note">Dated records only</span></div>
+          <div class="chart-wrap"><canvas id="monthly-chart" aria-label="Monthly tracker volume trend"></canvas></div>
         </article>
         <article class="panel">
-          <div class="panel-heading"><div><p class="panel-kicker">Work in motion</p><h2>Asset status</h2></div><span class="legend-note">Selected view</span></div>
-          <div class="chart-wrap"><canvas id="status-chart" aria-label="Asset status breakdown"></canvas></div>
+          <div class="panel-heading"><div><p class="panel-kicker">Live delivery status</p><h2>Current volume by project status</h2></div><span class="legend-note">Completed remains separate from On-Track</span></div>
+          <div class="chart-wrap"><canvas id="status-chart" aria-label="Current tracker volume by project status"></canvas></div>
         </article>
         <article class="panel panel-wide">
           <div class="panel-heading"><div><p class="panel-kicker">Output mix</p><h2>Content typology by studio</h2></div><span class="legend-note">Stacked volume</span></div>
           <div class="chart-wrap chart-large"><canvas id="typology-chart" aria-label="Content typology volume by studio"></canvas></div>
         </article>
         <article class="panel panel-wide">
-          <div class="panel-heading"><div><p class="panel-kicker">Production mix</p><h2>Creation, adaptation &amp; other asset types</h2></div><span class="legend-note">No forced reclassification</span></div>
-          <div class="chart-wrap chart-large"><canvas id="asset-type-chart" aria-label="Asset creation, adaptation and other asset types by studio"></canvas></div>
+          <div class="panel-heading"><div><p class="panel-kicker">Production mix</p><h2>Creation vs adaptation + others</h2></div><span class="legend-note">Two-way view</span></div>
+          <div class="chart-wrap chart-large"><canvas id="asset-type-chart" aria-label="Asset creation versus adaptation and others by studio"></canvas></div>
         </article>
       </section>
 
       <section class="panel table-panel">
-        <div class="panel-heading"><div><p class="panel-kicker">Market comparison</p><h2>Studio delivery summary</h2></div><button id="download-assets" class="secondary-button" type="button">Download CSV</button></div>
-        <div class="table-scroll"><table><thead><tr><th>Studio</th><th>FY assets</th><th>Completed</th><th>Utilization</th><th>Monthly avg.</th><th>Creation</th><th>Adaptation</th><th>Other / unclassified</th></tr></thead><tbody id="market-comparison-body"></tbody></table></div>
+        <div class="panel-heading"><div><p class="panel-kicker">Market comparison</p><h2>Studio scope and status summary</h2></div><button id="download-assets" class="secondary-button" type="button">Download CSV</button></div>
+        <div class="table-scroll"><table><thead><tr><th>Studio</th><th>FY scope</th><th>Assets delivered</th><th>Utilization</th><th>Completed</th><th>On-Track</th><th>Delayed</th><th>Not Started</th><th>Status missing</th><th>Prior output</th><th>Monthly avg.</th><th>Creation</th><th>Adaptation + Others</th></tr></thead><tbody id="market-comparison-body"></tbody></table></div>
       </section>
       </div>
 
@@ -142,6 +147,7 @@
   <script src="./js/config.js"></script>
   <script src="./js/data-source.js"></script>
   <script src="./js/calculations.js"></script>
+  <script src="./js/insights.js"></script>
   <script src="./js/shared-ui.js"></script>
   <script src="./js/assets-dashboard.js"></script>
 </body>

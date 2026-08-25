@@ -35,130 +35,163 @@
     });
   }
 
-  function hasMarketAssetData(data, marketId) {
-    return data.assets.some((record) => record.market_id === marketId);
+  function renderInsights(data, filters, byMarket) {
+    const insights = window.DashboardInsights.generate(data, filters, byMarket);
+    const context = filters.market === "all"
+      ? "All Studios"
+      : (data.markets.find((market) => market.id === filters.market)?.name || "Selected studio");
+    const filterContext = [context, `FY${String(filters.year).slice(-2)}`];
+    if (filters.quarter !== "all") filterContext.push(filters.quarter);
+    if (filters.typology !== "all") filterContext.push(filters.typology);
+    document.getElementById("insights-context").textContent = filterContext.join(" · ");
+    document.getElementById("asset-insights").innerHTML = insights.map((insight, index) => `
+      <article class="insight-item insight-${window.DashboardApp.escapeHtml(insight.tone)}">
+        <span class="insight-rank">${String(index + 1).padStart(2, "0")}</span>
+        <div><strong>${window.DashboardApp.escapeHtml(insight.title)}</strong><p>${window.DashboardApp.escapeHtml(insight.copy)}</p></div>
+      </article>`).join("");
   }
 
-  function plannedAssetVolume(data, marketId, year) {
-    const record = data.finance.find((item) => item.market_id === marketId && Number(item.fiscal_year) === Number(year));
-    return record && Calc.hasValue(record.planned_asset_volume) ? Number(record.planned_asset_volume) : null;
-  }
-
-  function renderAlerts(data, filters) {
-    const issues = data.quality_issues.filter((issue) => filters.market === "all" || issue.market_id === filters.market);
-    const target = document.getElementById("quality-alerts");
-    target.innerHTML = issues.map((issue) => `<div class="data-alert"><span class="alert-mark">!</span><div><strong>${window.DashboardApp.escapeHtml(issue.type)}:</strong> ${window.DashboardApp.escapeHtml(issue.message)}</div></div>`).join("");
-  }
-
-  function renderKpis(data, filters, records) {
-    const summary = Calc.assetSummary(records, data, filters.year);
-    const selectedIsMissing = filters.market !== "all" && !hasMarketAssetData(data, filters.market);
-    const selectedPlan = filters.market !== "all" ? plannedAssetVolume(data, filters.market, filters.year) : null;
-    const hasPlanOnly = selectedIsMissing && Calc.hasValue(selectedPlan);
+  function renderKpis(data, filters, byMarket) {
+    const summary = filters.market === "all" ? Calc.portfolioAssetSummary(byMarket, data, filters) : byMarket[0].summary;
+    const selectedIsMissing = filters.market !== "all" && !byMarket[0].hasCurrentVolume;
+    const fullView = filters.quarter === "all" && filters.typology === "all";
     const knownMarketCount = data.data_status.filter((row) => row.asset_data_status !== "Awaiting data").length;
     const context = filters.market === "all" ? `${knownMarketCount} of ${data.markets.length} studios reporting` : (data.markets.find((market) => market.id === filters.market)?.name || "Selected market");
     const setNumber = (id, value, decimals = 0) => {
       const element = document.getElementById(id);
-      element.textContent = selectedIsMissing ? "Awaiting data" : Calc.formatNumber(value, decimals);
-      element.classList.toggle("is-missing", selectedIsMissing);
+      const missing = selectedIsMissing || !Calc.hasValue(value);
+      element.textContent = missing ? "Awaiting data" : Calc.formatNumber(value, decimals);
+      element.classList.toggle("is-missing", missing);
     };
-    const totalLabel = document.getElementById("kpi-total-label");
-    totalLabel.textContent = hasPlanOnly ? "Planned FY volume" : "Total FY assets";
-    if (hasPlanOnly) {
-      const total = document.getElementById("kpi-total-assets");
-      total.textContent = Calc.formatNumber(selectedPlan);
-      total.classList.remove("is-missing");
-    } else {
-      setNumber("kpi-total-assets", summary.total);
-    }
-    setNumber("kpi-completed", summary.completed);
-    const utilization = document.getElementById("kpi-utilization");
-    utilization.textContent = selectedIsMissing ? "Awaiting data" : Calc.formatPercent(summary.utilization);
-    utilization.classList.toggle("is-missing", selectedIsMissing);
-    document.getElementById("utilization-bar").style.width = selectedIsMissing ? "0" : `${Math.min(summary.utilization || 0, 100)}%`;
+    const scopeCard = document.getElementById("fy-scope-card");
+    const scope = document.getElementById("kpi-fy-scope");
+    scope.textContent = Calc.hasValue(summary.planned) ? Calc.formatNumber(summary.planned) : "Awaiting data";
+    scope.classList.toggle("is-missing", !Calc.hasValue(summary.planned));
+    setNumber("kpi-delivered", summary.currentVolume);
     setNumber("kpi-monthly-average", summary.monthlyAverage, 1);
-    setNumber("kpi-creation", summary.creation);
-    setNumber("kpi-adaptation", summary.adaptation);
-    document.getElementById("kpi-total-context").textContent = hasPlanOnly ? `${context} · planned, not delivered` : context;
-    document.getElementById("kpi-completed-context").textContent = selectedIsMissing ? "No submitted asset data" : `${Calc.formatPercent(summary.utilization)} of filtered FY volume`;
-    document.getElementById("kpi-month-context").textContent = `${summary.elapsedMonths} elapsed month${summary.elapsedMonths === 1 ? "" : "s"}`;
-    document.getElementById("kpi-creation-share").textContent = selectedIsMissing ? "Classification pending" : `${Calc.formatPercent(Calc.percentage(summary.creation, summary.total))} of filtered output`;
-    document.getElementById("kpi-adaptation-share").textContent = selectedIsMissing ? "Classification pending" : `${Calc.formatPercent(Calc.percentage(summary.adaptation, summary.total))} of filtered output`;
+
+    const mix = document.getElementById("kpi-creation-mix");
+    const adaptationAndOthers = summary.adaptation + summary.other;
+    const mixMissing = selectedIsMissing || !summary.currentVolume;
+    mix.textContent = mixMissing ? "Awaiting data" : `${Calc.formatNumber(summary.creation)} / ${Calc.formatNumber(adaptationAndOthers)}`;
+    mix.classList.toggle("is-missing", mixMissing);
+    document.getElementById("kpi-creation-mix-context").textContent = mixMissing
+      ? "Classification awaiting data"
+      : `${Calc.formatPercent(Calc.percentage(summary.creation, summary.currentVolume), 1)} creation · ${Calc.formatPercent(Calc.percentage(adaptationAndOthers, summary.currentVolume), 1)} adaptation + others`;
+
+    const utilization = document.getElementById("kpi-utilization");
+    utilization.textContent = Calc.hasValue(summary.utilization) ? Calc.formatPercent(summary.utilization, 1) : "Awaiting data";
+    utilization.classList.toggle("is-missing", !Calc.hasValue(summary.utilization));
+    document.getElementById("utilization-bar").style.width = Calc.hasValue(summary.utilization) ? `${Math.min(summary.utilization, 100)}%` : "0";
+
+    document.getElementById("kpi-delivered-context").textContent = selectedIsMissing
+      ? `${context} · current tracker volume awaiting data`
+      : !fullView
+        ? `${context} · filtered tracker view`
+        : `${context} · current tracker volume`;
+
+    const scopeContext = document.getElementById("kpi-fy-scope-context");
+    const planChange = summary.planYoyChange;
+    const priorScope = filters.market === "all" ? summary.comparablePlanHistory : byMarket[0].history?.assets_delivered;
+    scopeCard.classList.remove("trend-up", "trend-down", "trend-flat");
+    if (Calc.hasValue(planChange)) {
+      const direction = Number(planChange) > 0 ? "up" : Number(planChange) < 0 ? "down" : "flat";
+      const arrow = direction === "up" ? "↑" : direction === "down" ? "↓" : "—";
+      const movement = direction === "up" ? "increase" : direction === "down" ? "decrease" : "no change";
+      scopeCard.classList.add(`trend-${direction}`);
+      scopeContext.innerHTML = filters.market === "all"
+        ? `${summary.knownPlanMarkets} of ${data.markets.length} scopes known · <span class="trend-copy trend-${direction}">${arrow} ${Calc.formatPercent(Math.abs(planChange), 1)} ${movement}</span> in ${summary.planComparisonMarkets} comparable studio${summary.planComparisonMarkets === 1 ? "" : "s"}`
+        : `<span class="trend-copy trend-${direction}">${arrow} ${Calc.formatPercent(Math.abs(planChange), 1)} ${movement}</span> vs FY2025 · ${Calc.formatNumber(priorScope)} assets`;
+    } else if (Calc.hasValue(summary.planned)) {
+      scopeContext.textContent = filters.market === "all"
+        ? `${summary.knownPlanMarkets} of ${data.markets.length} studios with confirmed scope`
+        : "FY2025 comparison awaiting data";
+    } else {
+      scopeContext.textContent = "FY2026 full-year scope awaiting data";
+    }
+    if (!fullView) {
+      document.getElementById("kpi-utilization-context").textContent = "Full-year utilization hidden for filtered view";
+    } else if (filters.market === "all") {
+      document.getElementById("kpi-utilization-context").textContent = summary.comparableMarkets
+        ? `${Calc.formatNumber(summary.comparableCurrentVolume)} current of ${Calc.formatNumber(summary.comparablePlanned)} comparable FY scope · ${summary.comparableMarkets} market${summary.comparableMarkets === 1 ? "" : "s"}`
+        : "Awaiting markets with both current volume and FY scope";
+    } else if (Calc.hasValue(summary.planned) && byMarket[0].hasCurrentVolume) {
+      document.getElementById("kpi-utilization-context").textContent = `${Calc.formatNumber(summary.currentVolume)} current of ${Calc.formatNumber(summary.planned)} FY scope`;
+    } else {
+      document.getElementById("kpi-utilization-context").textContent = Calc.hasValue(summary.planned) ? "Current tracker volume awaiting data" : "FY scope awaiting data";
+    }
+    document.getElementById("kpi-month-context").textContent = `${summary.elapsedMonths} elapsed month${summary.elapsedMonths === 1 ? "" : "s"} · delivery pace`;
   }
 
-  function renderProgressChart(data, filters, byMarket) {
+  function renderProgressChart(filters, byMarket) {
     const labels = byMarket.map((row) => row.market.name);
-    const totals = byMarket.map((row) => hasMarketAssetData(data, row.market.id) ? row.summary.total : null);
-    const completed = byMarket.map((row) => hasMarketAssetData(data, row.market.id) ? row.summary.completed : null);
-    const planned = byMarket.map((row) => hasMarketAssetData(data, row.market.id) ? null : plannedAssetVolume(data, row.market.id, filters.year));
+    const current = byMarket.map((row) => row.hasCurrentVolume ? row.summary.currentVolume : null);
+    const fullView = filters.quarter === "all" && filters.typology === "all";
+    const planned = byMarket.map((row) => fullView && Calc.hasValue(row.summary.planned) ? row.summary.planned : null);
     makeChart("assets-completed-chart", { type: "bar", data: { labels, datasets: [
-      { label: "FY assets", data: totals, backgroundColor: C.navy, borderRadius: 7, maxBarThickness: 44 },
-      { label: "Completed", data: completed, backgroundColor: C.coral, borderRadius: 7, maxBarThickness: 44 },
-      { label: "Planned volume (delivery pending)", data: planned, backgroundColor: C.gold, borderRadius: 7, maxBarThickness: 44 }
+      { label: "Current tracker volume", data: current, backgroundColor: C.coral, borderRadius: 7, maxBarThickness: 44 },
+      { label: "FY scope", data: planned, backgroundColor: C.navy, borderRadius: 7, maxBarThickness: 44 }
     ] }, options: baseOptions(false) });
   }
 
   function renderMonthlyChart(records) {
     const monthData = Array(12).fill(0);
     records.filter((record) => Number(record.month) >= 1 && Number(record.month) <= 12).forEach((record) => { monthData[Number(record.month) - 1] += Number(record.asset_volume); });
-    const completedData = Array(12).fill(0);
-    records.filter((record) => record.delivery_status === "Completed" && Number(record.month) >= 1 && Number(record.month) <= 12).forEach((record) => { completedData[Number(record.month) - 1] += Number(record.asset_volume); });
+    const unscheduled = records.filter((record) => Number(record.month) === 0).reduce((total, record) => total + Number(record.asset_volume), 0);
+    document.getElementById("monthly-chart-note").textContent = unscheduled ? `${Calc.formatNumber(unscheduled)} tracker volume not month-assigned` : "All current volume month-assigned";
     const options = baseOptions(false);
-    options.plugins.legend.position = "bottom";
+    options.plugins.legend.display = false;
     makeChart("monthly-chart", { type: "line", data: { labels: Calc.MONTHS, datasets: [
-      { label: "All assets", data: monthData, borderColor: C.navy, backgroundColor: "rgba(11,41,70,.10)", tension: .32, fill: true, pointRadius: 3, pointBackgroundColor: C.navy },
-      { label: "Completed", data: completedData, borderColor: C.coral, backgroundColor: "transparent", tension: .32, pointRadius: 3, pointBackgroundColor: C.coral }
+      { label: "Current tracker volume", data: monthData, borderColor: C.coral, backgroundColor: "rgba(241,90,74,.10)", tension: .32, fill: true, pointRadius: 3, pointBackgroundColor: C.coral }
     ] }, options });
   }
 
-  function renderStatusChart(records) {
-    const status = Calc.aggregateBy(records, "delivery_status");
-    const values = Calc.STATUSES.map((name) => status[name] || 0);
-    makeChart("status-chart", { type: "doughnut", data: { labels: Calc.STATUSES, datasets: [{ data: values, backgroundColor: [C.green, C.blue, C.gold, C.grey, "#d3d9df"], borderColor: "#fff", borderWidth: 3, hoverOffset: 4 }] }, options: {
-      responsive: true, maintainAspectRatio: false, cutout: "65%",
-      plugins: { legend: { position: "bottom", labels: { color: "#627285", boxWidth: 9, boxHeight: 9, padding: 15, usePointStyle: true, font: { family: "WPP", size: 10 } } }, tooltip: { backgroundColor: C.navy, padding: 12, bodyFont: { family: "WPP" }, titleFont: { family: "WPP" } } }
-    } });
+  function renderStatusChart(byMarket) {
+    const datasets = [
+      ["Completed", "completed", C.green], ["On-Track", "onTrack", C.teal], ["Delayed", "delayed", C.coral],
+      ["Not Started", "notStarted", C.gold], ["Unclassified", "statusMissing", C.grey]
+    ].map(([label, key, color]) => ({ label, data: byMarket.map((row) => row.hasCurrentVolume ? row.summary[key] : null), backgroundColor: color, borderRadius: 5 }));
+    makeChart("status-chart", { type: "bar", data: { labels: byMarket.map((row) => row.market.name), datasets }, options: baseOptions(true) });
   }
 
-  function renderTypologyChart(data, byMarket) {
+  function renderTypologyChart(byMarket) {
     const colors = [C.coral, C.navy, C.teal, C.gold, C.grey];
     const datasets = Calc.TYPOLOGIES.map((typology, index) => ({
       label: typology,
-      data: byMarket.map((row) => hasMarketAssetData(data, row.market.id) ? (Calc.aggregateBy(row.records, "content_typology")[typology] || 0) : null),
+      data: byMarket.map((row) => row.hasCurrentVolume ? (Calc.aggregateBy(row.records, "content_typology")[typology] || 0) : null),
       backgroundColor: colors[index], borderRadius: 3, maxBarThickness: 58
     }));
     makeChart("typology-chart", { type: "bar", data: { labels: byMarket.map((row) => row.market.name), datasets }, options: baseOptions(true) });
   }
 
-  function renderAssetTypeChart(data, byMarket) {
-    const colors = [C.coral, C.navy, C.teal, C.purple, C.gold, C.grey];
-    const datasets = Calc.ASSET_TYPES.map((type, index) => ({
-      label: type,
-      data: byMarket.map((row) => hasMarketAssetData(data, row.market.id) ? (Calc.aggregateBy(row.records, "asset_type")[type] || 0) : null),
-      backgroundColor: colors[index], borderRadius: 3, maxBarThickness: 58
-    }));
+  function renderAssetTypeChart(byMarket) {
+    const datasets = [
+      { label: "Asset Creation", data: byMarket.map((row) => row.hasCurrentVolume ? row.summary.creation : null), backgroundColor: C.coral, borderRadius: 3, maxBarThickness: 58 },
+      { label: "Adaptation + Others", data: byMarket.map((row) => row.hasCurrentVolume ? row.summary.adaptation + row.summary.other : null), backgroundColor: C.navy, borderRadius: 3, maxBarThickness: 58 }
+    ];
     makeChart("asset-type-chart", { type: "bar", data: { labels: byMarket.map((row) => row.market.name), datasets }, options: baseOptions(true) });
   }
 
   function marketInitial(name) { return name === "Philippines" ? "PH" : name === "Thailand" ? "TH" : name === "Vietnam" ? "VN" : name === "Malaysia" ? "MY" : name.slice(0, 2).toUpperCase(); }
 
-  function renderTable(data, filters, byMarket) {
+  function renderTable(filters, byMarket) {
     const tbody = document.getElementById("market-comparison-body");
     tbody.innerHTML = byMarket.map((row) => {
-      const missing = !hasMarketAssetData(data, row.market.id);
-      const planned = plannedAssetVolume(data, row.market.id, filters.year);
+      const missing = !row.hasCurrentVolume;
+      const planned = row.summary.planned;
       const s = row.summary;
       const val = (value, decimals = 0) => missing ? '<span class="empty-cell">Awaiting data</span>' : Calc.formatNumber(value, decimals);
-      const percent = missing ? '<span class="empty-cell">Awaiting data</span>' : Calc.formatPercent(s.utilization);
-      const total = missing && Calc.hasValue(planned) ? `${Calc.formatNumber(planned)} <span class="value-qualifier">planned</span>` : val(s.total);
-      return `<tr><td><span class="market-cell"><span class="market-initial">${marketInitial(row.market.name)}</span>${window.DashboardApp.escapeHtml(row.market.name)}</span></td><td class="numeric">${total}</td><td class="numeric">${val(s.completed)}</td><td class="numeric">${percent}</td><td class="numeric">${val(s.monthlyAverage, 1)}</td><td class="numeric">${val(s.creation)}</td><td class="numeric">${val(s.adaptation)}</td><td class="numeric">${val(s.other)}</td></tr>`;
+      const percent = Calc.hasValue(s.utilization) ? Calc.formatPercent(s.utilization, 1) : '<span class="empty-cell">Awaiting data</span>';
+      const plan = Calc.hasValue(planned) ? Calc.formatNumber(planned) : '<span class="empty-cell">Awaiting data</span>';
+      const history = Calc.hasValue(row.history?.assets_delivered) ? `${Calc.formatNumber(row.history.assets_delivered)} <span class="value-qualifier">${window.DashboardApp.escapeHtml(row.history.period_label)}</span>` : '<span class="empty-cell">Awaiting data</span>';
+      return `<tr><td><span class="market-cell"><span class="market-initial">${marketInitial(row.market.name)}</span>${window.DashboardApp.escapeHtml(row.market.name)}</span></td><td class="numeric">${plan}</td><td class="numeric">${val(s.currentVolume)}</td><td class="numeric">${percent}</td><td class="numeric">${val(s.completed)}</td><td class="numeric">${val(s.onTrack)}</td><td class="numeric">${val(s.delayed)}</td><td class="numeric">${val(s.notStarted)}</td><td class="numeric">${val(s.statusMissing)}</td><td class="numeric">${history}</td><td class="numeric">${val(s.monthlyAverage, 1)}</td><td class="numeric">${val(s.creation)}</td><td class="numeric">${val(s.adaptation + s.other)}</td></tr>`;
     }).join("");
 
     document.getElementById("download-assets").onclick = () => {
-      const rows = [["Studio", "FY assets", "Completed", "Utilization %", "Monthly average", "Creation", "Adaptation", "Other / unclassified"]];
+      const rows = [["Studio", "FY scope", "Assets delivered", "Utilization %", "Completed", "On-Track", "Delayed", "Not Started", "Status missing", "Prior period", "Prior output", "Monthly average", "Creation", "Adaptation + Others"]];
       byMarket.forEach((row) => {
-        const missing = !hasMarketAssetData(data, row.market.id); const s = row.summary;
-        rows.push([row.market.name, missing ? "" : s.total, missing ? "" : s.completed, missing ? "" : s.utilization?.toFixed(1), missing ? "" : s.monthlyAverage?.toFixed(1), missing ? "" : s.creation, missing ? "" : s.adaptation, missing ? "" : s.other]);
+        const missing = !row.hasCurrentVolume; const s = row.summary;
+        rows.push([row.market.name, s.planned ?? "", missing ? "" : s.currentVolume, s.utilization?.toFixed(1) ?? "", missing ? "" : s.completed, missing ? "" : s.onTrack, missing ? "" : s.delayed, missing ? "" : s.notStarted, missing ? "" : s.statusMissing, row.history?.period_label ?? "", row.history?.assets_delivered ?? "", missing ? "" : s.monthlyAverage?.toFixed(1), missing ? "" : s.creation, missing ? "" : s.adaptation + s.other]);
       });
       window.DashboardApp.downloadCsv(`aoa-assets-fy${String(filters.year).slice(-2)}.csv`, rows);
     };
@@ -296,6 +329,7 @@
     const isTat = tatState.view === "tat";
     document.getElementById("asset-view").hidden = isTat;
     document.getElementById("tat-view").hidden = !isTat;
+    document.getElementById("insights-panel").hidden = isTat;
     document.getElementById("view-switch-title").textContent = isTat ? "Turnaround time (TAT)" : "Asset output";
     document.querySelectorAll("[data-dashboard-view]").forEach((button) => {
       const active = button.dataset.dashboardView === tatState.view;
@@ -309,7 +343,7 @@
   }
 
   function bindTatControls() {
-    try { Object.assign(tatState, JSON.parse(localStorage.getItem(TAT_STORAGE_KEY) || "{}")); } catch (_) {}
+    try { Object.assign(tatState, JSON.parse(localStorage.getItem(TAT_STORAGE_KEY) || "{}")); } catch {}
     if (!["assets", "tat"].includes(tatState.view)) tatState.view = "assets";
     if (!["median", "average"].includes(tatState.metric)) tatState.metric = "median";
     tatState.includeLongRunning = Boolean(tatState.includeLongRunning);
@@ -327,14 +361,14 @@
 
   function render() {
     const { data, filters } = window.DashboardApp;
-    renderAlerts(data, filters);
     if (tatState.view === "tat") {
       renderTat(data, filters);
     } else {
       const records = Calc.filterAssets(data, filters);
       const byMarket = Calc.assetsByMarket(data, filters);
-      renderKpis(data, filters, records); renderProgressChart(data, filters, byMarket);
-      renderMonthlyChart(records); renderStatusChart(records); renderTypologyChart(data, byMarket); renderAssetTypeChart(data, byMarket); renderTable(data, filters, byMarket);
+      renderInsights(data, filters, byMarket);
+      renderKpis(data, filters, byMarket); renderProgressChart(filters, byMarket);
+      renderMonthlyChart(records); renderStatusChart(byMarket); renderTypologyChart(byMarket); renderAssetTypeChart(byMarket); renderTable(filters, byMarket);
     }
   }
 
