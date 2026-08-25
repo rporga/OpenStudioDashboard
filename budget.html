@@ -12,7 +12,7 @@
   <header id="app-header" class="site-header"></header>
   <main id="main-content" class="page-shell">
     <section class="page-intro">
-      <div><p class="eyebrow">AOA Content Studio Dashboard</p><h1>Budget &amp; Approved Fees</h1><p class="intro-copy">Track Nestlé Budget, approved AgencyMania scope, used-so-far figures and the Studio/KOL allocation.</p></div>
+      <div><p class="eyebrow">AOA Content Studio Dashboard</p><h1>Budget &amp; approved fees</h1><p class="intro-copy">Track Nestlé Budget, approved AgencyMania scope, used-so-far figures and the Studio/KOL allocation.</p></div>
       <div class="updated-block"><span>Source updated</span><strong id="source-updated">—</strong></div>
     </section>
     <section id="global-filters" class="filter-panel" aria-label="Dashboard filters"></section>
@@ -21,13 +21,25 @@
     <section id="error-state" class="state-card state-error" hidden></section>
 
     <div id="dashboard-content" hidden>
-      <section class="notice-banner"><span class="notice-icon">i</span><div><strong>Approved in AM and Used So Far are different measures.</strong><p>Approved in AM is secured scope. Used So Far is the actual amount utilised to date. Financial values use USD000 and missing values are never treated as zero.</p></div></section>
+      <section class="currency-toolbar" aria-label="Financial display currency">
+        <div>
+          <span class="switch-label">Display currency</span>
+          <strong id="currency-display-copy">USD000</strong>
+          <small id="currency-rate-note">Display conversion only · USD is the calculation base.</small>
+        </div>
+        <div id="currency-toggle" class="segmented-control compact" role="group" aria-label="Choose financial display currency">
+          <button class="segment-button active" type="button" data-currency="USD" aria-pressed="true">USD</button>
+          <button class="segment-button" type="button" data-currency="CHF" aria-pressed="false">CHF</button>
+        </div>
+      </section>
+
+      <section class="notice-banner"><span class="notice-icon">i</span><div><strong>Approved in AM and Used So Far are different measures.</strong><p>Approved in AM is secured scope. Used So Far is the actual amount utilised to date. The currency toggle changes display values only; missing values are never treated as zero.</p></div></section>
 
       <section class="kpi-grid finance-kpi-grid" aria-label="Financial summary">
-        <article class="kpi-card kpi-primary"><div class="kpi-top"><span>Nestlé Budget</span><button class="info-button" data-tip="The current Nestlé annual budget. Values are shown in USD000." aria-label="About Nestlé Budget">i</button></div><strong id="kpi-budget">—</strong><small id="kpi-budget-context">FY2025 comparison awaiting data</small></article>
-        <article class="kpi-card"><div class="kpi-top"><span id="approved-kpi-label">Approved in AM</span><button class="info-button" data-tip="Approved AgencyMania Net Fee in USD000. Missing markets are excluded, not counted as zero." aria-label="About Approved in AM">i</button></div><strong id="kpi-approved">—</strong><small id="kpi-approved-context">FY2025 comparison awaiting data</small></article>
+        <article class="kpi-card kpi-primary"><div class="kpi-top"><span>Nestlé Budget</span><button class="info-button" data-tip="The current Nestlé annual budget, shown in the selected display currency." aria-label="About Nestlé Budget">i</button></div><strong id="kpi-budget">—</strong><small id="kpi-budget-context">FY2025 comparison awaiting data</small></article>
+        <article class="kpi-card"><div class="kpi-top"><span id="approved-kpi-label">Approved in AM</span><button class="info-button" data-tip="Approved AgencyMania Net Fee in the selected display currency. Missing markets are excluded, not counted as zero." aria-label="About Approved in AM">i</button></div><strong id="kpi-approved">—</strong><small id="kpi-approved-context">FY2025 comparison awaiting data</small></article>
         <article class="kpi-card"><div class="kpi-top"><span>Used So Far</span><button class="info-button" data-tip="Actual amount utilised to date. This is separate from Approved in AM and remains unavailable until supplied." aria-label="About Used So Far">i</button></div><strong id="kpi-used">—</strong><small id="kpi-used-context">FY2025 comparison awaiting data</small></article>
-        <article class="kpi-card"><div class="kpi-top"><span>Studio vs KOL</span><button class="info-button" data-tip="Confirmed Nestlé Budget allocation between Studio/content and KOL. Markets without a split are excluded." aria-label="About Studio versus KOL">i</button></div><strong id="kpi-split">—</strong><small id="kpi-split-context">Studio / KOL · USD000</small></article>
+        <article class="kpi-card"><div class="kpi-top"><span>Studio vs KOL</span><button class="info-button" data-tip="Confirmed Nestlé Budget allocation between Studio/content and KOL. Markets without a split are excluded." aria-label="About Studio versus KOL">i</button></div><strong id="kpi-split">—</strong><small id="kpi-split-context">Studio / KOL</small></article>
       </section>
 
       <section class="coverage-panel">
@@ -36,9 +48,9 @@
       </section>
 
       <section class="chart-grid">
-        <article class="panel panel-wide"><div class="panel-heading"><div><p class="panel-kicker">Secured scope</p><h2>Nestlé Budget vs Approved in AM</h2></div><span class="legend-note">USD000</span></div><div class="chart-wrap chart-medium chart-with-empty"><canvas id="budget-approved-chart"></canvas><div id="budget-approved-empty" class="chart-empty" hidden>Awaiting approved AM data for this view.</div></div><p id="budget-approved-note" class="chart-note"></p></article>
-        <article class="panel panel-wide"><div class="panel-heading"><div><p class="panel-kicker">Utilisation</p><h2>Nestlé Budget vs Used So Far</h2></div><span class="legend-note">USD000</span></div><div class="chart-wrap chart-medium chart-with-empty"><canvas id="budget-spend-chart"></canvas><div id="budget-spend-empty" class="chart-empty" hidden>Used-so-far figures have not been supplied.</div></div></article>
-        <article class="panel panel-wide"><div class="panel-heading"><div><p class="panel-kicker">Allocation</p><h2>Studio vs KOL budget</h2></div><span class="legend-note">USD000 · confirmed splits only</span></div><div class="chart-wrap chart-medium chart-with-empty"><canvas id="budget-split-chart"></canvas><div id="budget-split-empty" class="chart-empty" hidden>Studio and KOL budget split is awaiting data.</div></div></article>
+        <article class="panel panel-wide"><div class="panel-heading"><div><p class="panel-kicker">Secured scope</p><h2>Nestlé Budget vs Approved in AM</h2></div><span class="legend-note"><span data-currency-unit>USD000</span></span></div><div class="chart-wrap chart-medium chart-with-empty"><canvas id="budget-approved-chart"></canvas><div id="budget-approved-empty" class="chart-empty" hidden>Awaiting approved AM data for this view.</div></div><p id="budget-approved-note" class="chart-note"></p></article>
+        <article class="panel panel-wide"><div class="panel-heading"><div><p class="panel-kicker">Utilisation</p><h2>Nestlé Budget vs Used So Far</h2></div><span class="legend-note"><span data-currency-unit>USD000</span></span></div><div class="chart-wrap chart-medium chart-with-empty"><canvas id="budget-spend-chart"></canvas><div id="budget-spend-empty" class="chart-empty" hidden>Used-so-far figures have not been supplied.</div></div></article>
+        <article class="panel panel-wide"><div class="panel-heading"><div><p class="panel-kicker">Allocation</p><h2>Studio vs KOL budget</h2></div><span class="legend-note"><span data-currency-unit>USD000</span> · confirmed splits only</span></div><div class="chart-wrap chart-medium chart-with-empty"><canvas id="budget-split-chart"></canvas><div id="budget-split-empty" class="chart-empty" hidden>Studio and KOL budget split is awaiting data.</div></div></article>
       </section>
 
       <section class="panel table-panel">
