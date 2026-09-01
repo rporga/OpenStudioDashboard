@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AOA Content Studio Nestlé Enablement and WPP Readiness scorecards">
+  <title>Studio Scorecards | Content Studio Tracker</title>
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body data-page="scorecards">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand-row">
+        <div class="brand-lockup">
+          <img class="brand-logo" src="./assets/openstudio-logo.png" alt="OpenStudio">
+          <span class="brand-divider" aria-hidden="true"></span>
+          <span class="tracker-name">Content Studio Tracker</span>
+        </div>
+        <span class="header-meta">FY26 · AOA Studio Network</span>
+      </div>
+      <nav class="nav-bar" aria-label="Primary navigation">
+        <a class="nav-link" data-scorecard-nav="assets" href="./index.html"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></svg></span>Asset Dashboard</a>
+        <a class="nav-link" data-scorecard-nav="budget" href="./budget.html"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4zM7 7V5h10v2m-9 6h4m-4 3h7"/></svg></span>Budget Dashboard</a>
+        <a class="nav-link active" data-scorecard-nav="scorecards" href="./scorecards.html"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 15l3-3 2 2 4-5M8 9h3"/></svg></span>Studio Scorecards</a>
+        <a class="nav-link" data-scorecard-nav="status" href="./data-status.html"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 9h8M8 13h8m-8 4h5"/></svg></span>Data Status</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="page-shell">
+    <section class="page-intro">
+      <div>
+        <p class="eyebrow">AOA Content Studio Dashboard</p>
+        <h1>Studio Scorecards</h1>
+        <p class="intro-copy">Compare Nestlé Enablement and WPP Readiness, inspect every assessed criterion, and track the requirements needed to strengthen each studio.</p>
+      </div>
+      <div class="updated-block"><span>Assessment date</span><strong id="scorecard-updated">—</strong></div>
+    </section>
+
+    <section class="filter-panel scorecard-filter-panel" aria-label="Studio Scorecard filters">
+      <div class="filter-group">
+        <label for="scorecard-studio-filter">Studio</label>
+        <select id="scorecard-studio-filter" class="filter-select"></select>
+      </div>
+      <div class="filter-group">
+        <label for="scorecard-category-filter">Category</label>
+        <select id="scorecard-category-filter" class="filter-select"></select>
+      </div>
+      <button id="reset-scorecard-filters" class="reset-button" type="button">Reset filters</button>
+    </section>
+
+    <section id="scorecard-loading" class="state-card"><span class="loader"></span>Loading scorecard data…</section>
+    <section id="scorecard-error" class="state-card state-error" hidden></section>
+
+    <div id="scorecard-content" hidden>
+      <section id="special-status-banner" class="special-status-banner" hidden aria-live="polite"></section>
+
+      <section class="scorecard-method-strip" aria-label="Scoring method">
+        <div><span class="method-key method-fulfilled">1</span><strong>Fulfilled</strong></div>
+        <div><span class="method-key method-partial">0.5</span><strong>Partially fulfilled / In progress</strong></div>
+        <div><span class="method-key method-unfulfilled">0</span><strong>Not fulfilled</strong></div>
+        <div><span class="method-key method-excluded">—</span><strong>Blank / not assessed excluded</strong></div>
+        <p>Category scores are calculated first. The four categories are then weighted equally.</p>
+      </section>
+
+      <section class="kpi-grid scorecard-kpi-grid" aria-label="Scorecard summary">
+        <article class="kpi-card kpi-primary"><div class="kpi-top"><span>Nestlé Enablement</span><button class="info-button" data-tip="Equal-weight average of assessed Nestlé category scores." aria-label="About Nestlé Enablement">i</button></div><strong id="kpi-nestle-score">—</strong><small id="kpi-nestle-context">Four equal-weight categories</small></article>
+        <article class="kpi-card"><div class="kpi-top"><span>WPP Readiness</span><button class="info-button" data-tip="Equal-weight average of assessed WPP category scores." aria-label="About WPP Readiness">i</button></div><strong id="kpi-wpp-score">—</strong><small id="kpi-wpp-context">Four equal-weight categories</small></article>
+        <article class="kpi-card scorecard-secondary-kpi"><div class="kpi-top"><span>Combined score</span><button class="info-button" data-tip="Secondary measure: average of the overall Nestlé Enablement and WPP Readiness scores when both are available." aria-label="About combined score">i</button></div><strong id="kpi-combined-score">—</strong><small>Secondary measure only</small></article>
+        <article class="kpi-card"><div class="kpi-top"><span>Assessment coverage</span><button class="info-button" data-tip="Assessed questions across Nestlé and WPP. Excluded source items are shown separately and never enter denominators." aria-label="About assessment coverage">i</button></div><strong id="kpi-assessment-coverage">—</strong><small id="kpi-coverage-context">Assessed criteria</small></article>
+      </section>
+
+      <section class="insights-panel" aria-labelledby="scorecard-insights-title">
+        <div class="insights-heading">
+          <div><p class="panel-kicker">Transparent rule-based readout</p><h2 id="scorecard-insights-title">Key takeaways</h2></div>
+          <div class="insights-actions">
+            <span>Same inputs produce the same readout</span>
+            <button id="regenerate-scorecard-takeaways" class="regenerate-button" type="button"><span aria-hidden="true">↻</span> Regenerate takeaways</button>
+          </div>
+        </div>
+        <div id="scorecard-insights" class="insights-grid" aria-live="polite"></div>
+      </section>
+
+      <section id="scorecard-category-grid" class="scorecard-category-grid" aria-label="Category scores"></section>
+
+      <section class="scorecard-two-column">
+        <article class="panel requirement-panel">
+          <div class="panel-heading"><div><p class="panel-kicker">Fulfilled criteria</p><h2>Strengths</h2></div><span id="strength-count" class="legend-note"></span></div>
+          <div id="strength-list" class="requirement-list"></div>
+        </article>
+        <article class="panel requirement-panel">
+          <div class="panel-heading"><div><p class="panel-kicker">Partially or not fulfilled</p><h2>Missing requirements</h2></div><span id="missing-count" class="legend-note"></span></div>
+          <div id="missing-list" class="requirement-list"></div>
+        </article>
+      </section>
+
+      <section class="panel matrix-panel">
+        <div class="panel-heading">
+          <div><p class="panel-kicker">Comparable completed assessments only</p><h2>Readiness matrix</h2></div>
+          <span class="legend-note">X: WPP Readiness · Y: Nestlé Enablement</span>
+        </div>
+        <div class="matrix-chart-wrap"><canvas id="readiness-matrix" aria-label="WPP Readiness by Nestlé Enablement matrix"></canvas></div>
+        <p class="chart-note">Vietnam, China and Malaysia are excluded from the matrix because they do not have comparable completed assessments.</p>
+      </section>
+
+      <section class="panel scorecard-drilldown-panel">
+        <div class="panel-heading">
+          <div><p class="panel-kicker">Source-level assessment</p><h2>Original scorecard questions</h2></div>
+          <button id="download-criteria" class="secondary-button" type="button">Download criteria CSV</button>
+        </div>
+        <div id="scorecard-drilldowns" class="scorecard-drilldowns"></div>
+      </section>
+
+      <section class="panel table-panel fulfilment-panel">
+        <div class="panel-heading">
+          <div><p class="panel-kicker">Evidence and action tracking</p><h2>Fulfilment register</h2></div>
+          <div class="panel-button-group">
+            <button id="download-score-summary" class="secondary-button" type="button">Download scores CSV</button>
+            <button id="download-fulfilment" class="secondary-button" type="button">Download register CSV</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="fulfilment-table">
+            <thead><tr><th>Category</th><th>Original criterion</th><th>Simplified requirement</th><th>Nestlé/WPP responsibility</th><th>Current status</th><th>Evidence</th><th>Missing requirement</th><th>Next action</th><th>Owner</th><th>Dependency</th><th>Target date</th></tr></thead>
+            <tbody id="fulfilment-register-body"></tbody>
+          </table>
+        </div>
+        <div class="validation-links"><a href="./score-validation-report.html">Open full score-validation report</a><a href="./data/score-validation.csv" download>Download validation CSV</a><a href="./data/fulfilment-register.csv" download>Download all-studio register CSV</a></div>
+      </section>
+    </div>
+  </main>
+
+  <footer id="app-footer"><div class="footer-inner"><span><strong>Content Studio Tracker</strong> · AOA Studio Network</span><span>Missing values are excluded from scores, never treated as zero.</span></div></footer>
+  <script src="./js/vendor/chart.umd.js"></script>
+  <script src="./js/scorecards-dashboard.js"></script>
+</body>
+</html>

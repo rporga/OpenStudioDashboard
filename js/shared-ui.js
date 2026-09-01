@@ -4,6 +4,7 @@
   const navItems = [
     { id: "assets", label: "Asset Dashboard", href: "./index.html", icon: '<svg viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></svg>' },
     { id: "budget", label: "Budget Dashboard", href: "./budget.html", icon: '<svg viewBox="0 0 24 24"><path d="M4 7h16v12H4zM7 7V5h10v2m-9 6h4m-4 3h7"/></svg>' },
+    { id: "scorecards", label: "Studio Scorecards", href: "./scorecards.html", icon: '<svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 15l3-3 2 2 4-5M8 9h3"/></svg>' },
     { id: "status", label: "Data Status", href: "./data-status.html", icon: '<svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 9h8M8 13h8m-8 4h5"/></svg>' }
   ];
 
