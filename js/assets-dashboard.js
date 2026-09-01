@@ -4,6 +4,8 @@
   const Calc = window.DashboardCalc;
   const TAT_STORAGE_KEY = "aoa-content-studio-dashboard-tat-view";
   const tatState = { view: "assets", metric: "median", includeLongRunning: false };
+  const COMPLEXITIES = ["High", "Middle", "Low", "Unclassified"];
+  let dimensionMode = "brand";
   let insightCycle = 0;
 
   function destroyChart(id) {
@@ -179,6 +181,95 @@
       { label: "Adaptation + Others", data: byMarket.map((row) => row.hasCurrentVolume ? row.summary.adaptation + row.summary.other : null), backgroundColor: C.navy, borderRadius: 3, maxBarThickness: 58 }
     ];
     makeChart("asset-type-chart", { type: "bar", data: { labels: byMarket.map((row) => row.market.name), datasets }, options: baseOptions(true) });
+  }
+
+  function dimensionRows(records) {
+    const rows = new Map();
+    records.forEach((record) => {
+      const label = String(record[dimensionMode] || "Unclassified").trim() || "Unclassified";
+      const complexity = COMPLEXITIES.includes(record.complexity) ? record.complexity : "Unclassified";
+      if (!rows.has(label)) rows.set(label, { label, total: 0, High: 0, Middle: 0, Low: 0, Unclassified: 0 });
+      const volume = Number(record.asset_volume) || 0;
+      const row = rows.get(label);
+      row.total += volume;
+      row[complexity] += volume;
+    });
+    return [...rows.values()].sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
+  }
+
+  function filterDimensionRecords(data, filters) {
+    const marketIds = new Set(Calc.selectedMarketIds(data, filters));
+    return (data.asset_dimensions || []).filter((record) =>
+      Number(record.fiscal_year) === Number(filters.year) &&
+      marketIds.has(record.market_id) &&
+      (filters.quarter === "all" || record.quarter === filters.quarter) &&
+      (filters.typology === "all" || record.content_typology === filters.typology)
+    );
+  }
+
+  function setDynamicChartHeight(id, rowCount) {
+    const wrapper = document.getElementById(id);
+    wrapper.style.height = `${Math.max(300, rowCount * 34 + 58)}px`;
+  }
+
+  function horizontalOptions(stacked = false) {
+    const options = baseOptions(stacked);
+    options.indexAxis = "y";
+    options.interaction = { mode: "nearest", axis: "y", intersect: false };
+    options.scales.x = { stacked, beginAtZero: true, grid: { color: "#edf0f3" }, ticks: { color: "#718094", precision: 0, font: { family: "WPP", size: 11 } }, border: { display: false } };
+    options.scales.y = { stacked, grid: { display: false }, ticks: { color: "#536579", autoSkip: false, font: { family: "WPP", size: 11 } }, border: { display: false } };
+    return options;
+  }
+
+  function renderDimensionBreakdown(records, filters) {
+    const rows = dimensionRows(records);
+    const label = dimensionMode === "brand" ? "Brand" : "Category";
+    const labelLower = label.toLowerCase();
+    const total = rows.reduce((sum, row) => sum + row.total, 0);
+
+    document.getElementById("dimension-toolbar-title").textContent = `${label} view`;
+    document.getElementById("dimension-volume-title").textContent = `Assets by ${labelLower}`;
+    document.getElementById("complexity-dimension-title").textContent = `Complexity by ${labelLower}`;
+    document.getElementById("dimension-table-title").textContent = `${label} volume and complexity`;
+    document.getElementById("dimension-table-header").textContent = label;
+    document.getElementById("dimension-volume-note").textContent = `${Calc.formatNumber(total)} assets in selection`;
+    document.querySelectorAll("[data-asset-dimension]").forEach((button) => {
+      const active = button.dataset.assetDimension === dimensionMode;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+
+    setDynamicChartHeight("dimension-volume-chart-wrap", rows.length);
+    const volumeOptions = horizontalOptions(false);
+    volumeOptions.plugins.legend.display = false;
+    volumeOptions.plugins.tooltip.callbacks = { label: (context) => `${Calc.formatNumber(context.raw)} assets` };
+    makeChart("dimension-volume-chart", { type: "bar", data: { labels: rows.map((row) => row.label), datasets: [{ label: "Assets", data: rows.map((row) => row.total), backgroundColor: C.coral, borderRadius: 5, maxBarThickness: 22 }] }, options: volumeOptions });
+
+    const complexityTotals = Object.fromEntries(COMPLEXITIES.map((complexity) => [complexity, rows.reduce((sum, row) => sum + row[complexity], 0)]));
+    makeChart("complexity-chart", { type: "doughnut", data: { labels: COMPLEXITIES, datasets: [{ data: COMPLEXITIES.map((complexity) => complexityTotals[complexity]), backgroundColor: [C.navy, C.blue, C.teal, C.grey], borderColor: "#fff", borderWidth: 3 }] }, options: {
+      responsive: true, maintainAspectRatio: false, cutout: "62%",
+      plugins: { legend: { position: "bottom", labels: { color: "#627285", boxWidth: 9, boxHeight: 9, padding: 15, usePointStyle: true, font: { family: "WPP", size: 11 } } }, tooltip: { backgroundColor: C.navy, padding: 12, callbacks: { label: (context) => `${context.label}: ${Calc.formatNumber(context.raw)} assets (${Calc.formatPercent(Calc.percentage(context.raw, total), 1)})` } } }
+    } });
+
+    setDynamicChartHeight("complexity-dimension-chart-wrap", rows.length);
+    const complexityOptions = horizontalOptions(true);
+    complexityOptions.plugins.tooltip.callbacks = { label: (context) => `${context.dataset.label}: ${Calc.formatNumber(context.raw)} assets` };
+    makeChart("complexity-dimension-chart", { type: "bar", data: { labels: rows.map((row) => row.label), datasets: COMPLEXITIES.map((complexity, index) => ({ label: complexity, data: rows.map((row) => row[complexity]), backgroundColor: [C.navy, C.blue, C.teal, C.grey][index], borderRadius: 3, maxBarThickness: 24 })) }, options: complexityOptions });
+
+    document.getElementById("dimension-comparison-body").innerHTML = rows.length ? rows.map((row) => `<tr><td><strong class="dimension-name">${window.DashboardApp.escapeHtml(row.label)}</strong></td><td class="numeric">${Calc.formatNumber(row.total)}</td><td class="numeric">${Calc.formatPercent(Calc.percentage(row.total, total), 1)}</td>${COMPLEXITIES.map((complexity) => `<td class="numeric">${Calc.formatNumber(row[complexity])}</td>`).join("")}</tr>`).join("") : '<tr><td colspan="7"><span class="empty-cell">Awaiting data for this selection</span></td></tr>';
+
+    document.getElementById("download-dimensions").onclick = () => {
+      const csvRows = [[label, "Total assets", "Share of selection %", ...COMPLEXITIES]];
+      rows.forEach((row) => csvRows.push([row.label, row.total, Calc.percentage(row.total, total).toFixed(1), ...COMPLEXITIES.map((complexity) => row[complexity])]));
+      window.DashboardApp.downloadCsv(`aoa-assets-by-${dimensionMode}-fy${String(filters.year).slice(-2)}.csv`, csvRows);
+    };
+  }
+
+  function bindDimensionControls() {
+    document.querySelectorAll("[data-asset-dimension]").forEach((button) => button.addEventListener("click", () => {
+      dimensionMode = button.dataset.assetDimension;
+      renderDimensionBreakdown(filterDimensionRecords(window.DashboardApp.data, window.DashboardApp.filters), window.DashboardApp.filters);
+    }));
   }
 
   function marketInitial(name) { return name === "Philippines" ? "PH" : name === "Thailand" ? "TH" : name === "Vietnam" ? "VN" : name === "Malaysia" ? "MY" : name.slice(0, 2).toUpperCase(); }
@@ -377,10 +468,10 @@
       const byMarket = Calc.assetsByMarket(data, filters);
       renderInsights(data, filters, byMarket);
       renderKpis(data, filters, byMarket); renderProgressChart(filters, byMarket);
-      renderMonthlyChart(records); renderStatusChart(byMarket); renderTypologyChart(byMarket); renderAssetTypeChart(byMarket); renderTable(filters, byMarket);
+      renderMonthlyChart(records); renderStatusChart(byMarket); renderTypologyChart(byMarket); renderAssetTypeChart(byMarket); renderDimensionBreakdown(filterDimensionRecords(data, filters), filters); renderTable(filters, byMarket);
     }
   }
 
-  window.addEventListener("dashboardDataReady", () => { bindTatControls(); bindInsightControls(); render(); });
+  window.addEventListener("dashboardDataReady", () => { bindTatControls(); bindInsightControls(); bindDimensionControls(); render(); });
   window.addEventListener("dashboardFiltersChanged", () => { insightCycle = 0; render(); });
 })();

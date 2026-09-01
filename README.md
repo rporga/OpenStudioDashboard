@@ -23,7 +23,7 @@ Do not open the HTML by double-clicking it. Browsers can block the dashboard fro
 ## Pages
 
 - `index.html`: toggles between asset output and turnaround-time views, including market, creation/adaptation and delivery-band comparisons.
-- `budget.html`: Nestlé Budget, Approved in AM, Used So Far, Studio/KOL splits and financial completeness.
+- `budget.html`: Nestlé Budget, Approved in AM, Used So Far, Studio/KOL splits, financial completeness and a USD/CHF display toggle.
 - `data-status.html`: market-by-market data completeness.
 
 ## Data structure
@@ -34,6 +34,7 @@ Top-level collections:
 
 - `markets`: market names and stable IDs.
 - `assets`: normalized asset rows by fiscal year, month, market, typology, asset type and delivery status.
+- `asset_dimensions`: source-traceable asset rows for Brand, Procurement Sub-Category and Complexity analysis. Blank and placeholder taxonomy values are normalized to `Unclassified`.
 - `asset_plans`: full-year scope, current tracker volume and utilization percentages. A missing scope is `null`.
 - `historical_assets`: FY2025 or other prior reported output, including a comparability flag.
 - `finance`: one row per market and fiscal year.
@@ -58,12 +59,13 @@ The navigation filters, charts and tables read market options from the data and 
 
 ## Dynamic key takeaways
 
-The Asset Dashboard generates up to four ranked takeaways directly from the active JSON and filters. The rule-based engine compares confirmed FY2026 full-year scope with comparable FY2025 full-year output, then surfaces utilization, project-status mix and Creation versus Adaptation + Others. Increases are green, decreases are coral, and the wording describes direction without automatically treating lower volume as underperformance. It does not use fixed market copy or invent missing values. Pilot or non-comparable periods are labelled without calculating a misleading year-on-year percentage.
+The Asset Dashboard generates four ranked takeaways directly from the active JSON and filters. Use **Regenerate takeaways** to cycle through other valid observations for the same selection. The rule-based engine surfaces data coverage, utilization, project-status mix, delivery pace, Creation versus Adaptation + Others, leading brands and complexity-classification patterns. An All Studios increase or decrease is shown only when every studio has comparable FY2025 and FY2026 scope data; while coverage is incomplete, it displays a neutral coverage statement instead. Market-level comparisons remain available when that individual market has valid like-for-like data. The dashboard does not use fixed market copy, extrapolate incomplete totals or invent missing values.
 
 ## Update a market
 
 - Asset records require: `fiscal_year`, `month`, `quarter`, `market_id`, `content_typology`, `asset_type`, `delivery_status`, and `asset_volume`.
 - Financial records keep Nestlé Budget, Approved in AM and Used So Far separate.
+- Store finance calculations in the canonical `*_usd000` fields. The Budget Dashboard converts the display to CHF using `settings.usd_to_chf_conversion`; it does not overwrite or recalculate the source data.
 - Update `meta.source_updated_at`, each relevant row's `last_updated`, and the market's status fields.
 
 ## Switch to an online source
@@ -90,6 +92,9 @@ The online endpoint must return the same normalized JSON structure. When the onl
 - Utilization Percentage: current tracker volume divided by FY scope. It appears only when both values are available and full-year filters are selected.
 - Average Monthly Volume: current tracker volume divided by elapsed reporting months. It is a pace indicator, not a full-year forecast.
 - Creation and Adaptation: only quantities explicitly classified into those two categories. Localization, transcreation, compositioning, versioning and unclassified work remain separate in the source and are not shown as a headline KPI.
+- Brand volume: asset quantity grouped by `Master Brand`. Blank source values remain visible as `Unclassified`.
+- Category volume: asset quantity grouped by the tracker `Sub-Category` field. Placeholder selections remain visible as `Unclassified`.
+- Complexity: asset quantity grouped as High, Middle, Low or Unclassified. Both blank values and placeholder selections are included in Unclassified.
 - Turnaround Time (TAT): calendar days from `Project Brief Date` to the latest completed `Project Delivery Date`, calculated once per unique brief.
 - Median TAT: the middle duration across included briefs. This is the default because long project windows can distort an average.
 - Average TAT: the arithmetic mean across included briefs. It is available through the TAT toggle but should be interpreted with the displayed scope note.
@@ -99,6 +104,8 @@ The online endpoint must return the same normalized JSON structure. When the onl
 - Nestlé Budget: the confirmed annual Nestlé budget in USD000.
 - Approved in AM: Approved AgencyMania Net Fee. It is secured scope, not utilised spend.
 - Used So Far: the actual amount utilised to date. Missing values remain `null`.
+- Currency toggle: USD is the calculation base. CHF display values are calculated as USD divided by 1.237. Approved AgencyMania CHF source lines are normalized to USD by multiplying by 1.237.
+- Approved AM year-on-year: the Budget table shows increase/decrease only when the same market has both FY2025 and FY2026 Approved AM values. The All Studios KPI compares matched markets only; it never compares two different market sets.
 
 ## Known data-quality issues
 
@@ -115,7 +122,9 @@ The online endpoint must return the same normalized JSON structure. When the onl
 - Malaysia: 31 is the FY2026 full-year pilot scope; current tracker volume is awaiting data.
 - India: current tracker volume is 223. FY2025 output of 449 came from a late-start pilot, so no year-on-year percentage is calculated.
 - Used So Far is not yet available. Studio/KOL budget splits are available only for Thailand and China.
-- Approved AM Net Fee is available only for Thailand and Vietnam in the current source.
+- Philippines: FY2026 Nestlé Budget is USD 773,310.96.
+- Approved AM Net Fee is currently available for Thailand, Vietnam, Japan and Malaysia. China and South Africa were deliberately excluded from the latest AgencyMania screenshot update.
+- Full FY2025 Approved AM values are available for Philippines, Thailand/Indochina, Vietnam and MENA. Indochina is mapped to Thailand. FY2025 China is missing rather than zero.
 
 ## Verification
 

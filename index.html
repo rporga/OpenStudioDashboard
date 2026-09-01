@@ -14,7 +14,7 @@
     <section class="page-intro">
       <div>
         <p class="eyebrow">AOA Content Studio Dashboard</p>
-        <h1>Assets &amp; Utilization</h1>
+        <h1>Assets &amp; utilization</h1>
         <p class="intro-copy">Track Procurement deliverables, output mix and progress against confirmed full-year plans.</p>
       </div>
       <div class="updated-block"><span>Source updated</span><strong id="source-updated">—</strong></div>
@@ -81,6 +81,38 @@
           <div class="panel-heading"><div><p class="panel-kicker">Production mix</p><h2>Creation vs adaptation + others</h2></div><span class="legend-note">Two-way view</span></div>
           <div class="chart-wrap chart-large"><canvas id="asset-type-chart" aria-label="Asset creation versus adaptation and others by studio"></canvas></div>
         </article>
+      </section>
+
+      <section class="dimension-toolbar" aria-label="Brand and category breakdown controls">
+        <div>
+          <span class="switch-label">Asset breakdown</span>
+          <strong id="dimension-toolbar-title">Brand view</strong>
+          <small>Category uses the tracker’s Sub-Category field.</small>
+        </div>
+        <div class="segmented-control compact" role="group" aria-label="Group assets by brand or category">
+          <button class="segment-button active" type="button" data-asset-dimension="brand" aria-pressed="true">Brand</button>
+          <button class="segment-button" type="button" data-asset-dimension="category" aria-pressed="false">Category</button>
+        </div>
+      </section>
+
+      <section class="chart-grid">
+        <article class="panel">
+          <div class="panel-heading"><div><p class="panel-kicker">Portfolio composition</p><h2 id="dimension-volume-title">Assets by brand</h2></div><span id="dimension-volume-note" class="legend-note">Exact tracker volume</span></div>
+          <div class="chart-scroll"><div id="dimension-volume-chart-wrap" class="chart-dynamic"><canvas id="dimension-volume-chart" aria-label="Asset volume by brand or category"></canvas></div></div>
+        </article>
+        <article class="panel">
+          <div class="panel-heading"><div><p class="panel-kicker">Production effort</p><h2>Assets by complexity</h2></div><span class="legend-note">Blank values = Unclassified</span></div>
+          <div class="chart-wrap"><canvas id="complexity-chart" aria-label="Asset volume by complexity"></canvas></div>
+        </article>
+        <article class="panel panel-wide">
+          <div class="panel-heading"><div><p class="panel-kicker">Effort distribution</p><h2 id="complexity-dimension-title">Complexity by brand</h2></div><span class="legend-note">High · Middle · Low · Unclassified</span></div>
+          <div class="chart-scroll"><div id="complexity-dimension-chart-wrap" class="chart-dynamic"><canvas id="complexity-dimension-chart" aria-label="Complexity mix by brand or category"></canvas></div></div>
+        </article>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-heading"><div><p class="panel-kicker">Detailed breakdown</p><h2 id="dimension-table-title">Brand volume and complexity</h2></div><button id="download-dimensions" class="secondary-button" type="button">Download CSV</button></div>
+        <div class="table-scroll"><table class="dimension-table"><thead><tr><th id="dimension-table-header">Brand</th><th>Total assets</th><th>Share of selection</th><th>High</th><th>Middle</th><th>Low</th><th>Unclassified</th></tr></thead><tbody id="dimension-comparison-body"></tbody></table></div>
       </section>
 
       <section class="panel table-panel">

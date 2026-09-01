@@ -62,13 +62,61 @@
     );
   }
 
+  function taxonomyInsights(data, filters) {
+    const marketIds = new Set(Calc.selectedMarketIds(data, filters));
+    const records = (data.asset_dimensions || []).filter((record) =>
+      Number(record.fiscal_year) === Number(filters.year) &&
+      marketIds.has(record.market_id) &&
+      (filters.quarter === "all" || record.quarter === filters.quarter) &&
+      (filters.typology === "all" || record.content_typology === filters.typology)
+    );
+    const total = records.reduce((sum, record) => sum + Number(record.asset_volume || 0), 0);
+    if (!total) return [];
+
+    const brandTotals = {};
+    const highByBrand = {};
+    let unclassifiedComplexity = 0;
+    records.forEach((record) => {
+      const brand = record.brand || "Unclassified";
+      const volume = Number(record.asset_volume || 0);
+      brandTotals[brand] = (brandTotals[brand] || 0) + volume;
+      if (record.complexity === "High") highByBrand[brand] = (highByBrand[brand] || 0) + volume;
+      if (record.complexity === "Unclassified") unclassifiedComplexity += volume;
+    });
+
+    const leadingBrand = Object.entries(brandTotals).sort((a, b) => b[1] - a[1])[0];
+    const leadingHigh = Object.entries(highByBrand).sort((a, b) => b[1] - a[1])[0];
+    const insights = [];
+    if (leadingBrand?.[0] === "Unclassified") insights.push(item(
+      "Brand classification is awaiting data",
+      `${Calc.formatNumber(leadingBrand[1])} assets remain visible under Unclassified rather than being removed from the selected total.`,
+      "attention"
+    ));
+    else if (leadingBrand) insights.push(item(
+      `${leadingBrand[0]} leads selected brand volume`,
+      `${Calc.formatNumber(leadingBrand[1])} assets represent ${Calc.formatPercent(Calc.percentage(leadingBrand[1], total), 1)} of the selected output.`,
+      "neutral"
+    ));
+    if (leadingHigh && leadingHigh[1] > 0) insights.push(item(
+      `${leadingHigh[0]} has the largest High-complexity volume`,
+      `${Calc.formatNumber(leadingHigh[1])} High-complexity assets are recorded for this brand in the selected view.`,
+      "neutral"
+    ));
+    if (unclassifiedComplexity > 0) insights.push(item(
+      `${Calc.formatPercent(Calc.percentage(unclassifiedComplexity, total), 1)} of complexity is Unclassified`,
+      `${Calc.formatNumber(unclassifiedComplexity)} assets have a blank or placeholder complexity value and remain visible in the totals.`,
+      Calc.percentage(unclassifiedComplexity, total) >= 25 ? "attention" : "neutral"
+    ));
+    return insights;
+  }
+
   function rotateInsights(insights, cycle = 0, limit = 4) {
     if (insights.length <= limit) return insights.slice(0, limit);
     const start = ((Number(cycle) || 0) * limit) % insights.length;
     return Array.from({ length: limit }, (_, index) => insights[(start + index) % insights.length]);
   }
 
-  function marketInsights(filters, row, cycle = 0) {
+  function marketInsights(data, filters, row, cycle = 0) {
     const { summary, history, plan, market } = row;
     const fullView = filters.quarter === "all" && filters.typology === "all";
     if (!row.hasCurrentVolume && Calc.hasValue(summary.planned)) return [item(
@@ -130,6 +178,7 @@
     if (mix) insights.push(mix);
     const pace = paceInsight(summary);
     if (pace) insights.push(pace);
+    insights.push(...taxonomyInsights(data, filters));
     return rotateInsights(insights, cycle);
   }
 
@@ -195,11 +244,12 @@
       `${data.markets.length - reportingMarkets} studio${data.markets.length - reportingMarkets === 1 ? " is" : "s are"} still awaiting current delivery data. Portfolio totals only include supplied values.`,
       reportingMarkets === data.markets.length ? "positive" : "neutral"
     ));
+    insights.push(...taxonomyInsights(data, filters));
     return rotateInsights(insights, cycle);
   }
 
   function generate(data, filters, rows, cycle = 0) {
-    return filters.market === "all" ? portfolioInsights(data, filters, rows, cycle) : marketInsights(filters, rows[0], cycle);
+    return filters.market === "all" ? portfolioInsights(data, filters, rows, cycle) : marketInsights(data, filters, rows[0], cycle);
   }
 
   window.DashboardInsights = { generate, absoluteChange, statusInsight, mixInsight, paceInsight, rotateInsights };
