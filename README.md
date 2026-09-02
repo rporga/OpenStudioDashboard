@@ -1,34 +1,30 @@
 # AOA Content Studio Dashboard
 
-A responsive, multipage Content Studio Tracker for AOA studio asset delivery, output mix, financial coverage, and data quality.
+A responsive, multipage Content Studio Tracker for AOA studio asset delivery, output mix, financial coverage, data quality, and Studio Scorecards.
 
-The user-facing dashboard is a vanilla HTML/CSS/JavaScript application in `public/dashboard/`. The project shell redirects its root route to the static dashboard.
+The user-facing dashboard is a vanilla HTML/CSS/JavaScript application. All website files in this package are at the ZIP root and can be served directly as a static site.
 
 ## Run locally
 
 ### Quickest option
 
-1. Open a terminal in `public/dashboard/`.
+1. Extract the complete website ZIP and open a terminal in the extracted folder.
 2. Run `python3 -m http.server 8000`.
 3. Open `http://localhost:8000/index.html`.
 
 Do not open the HTML by double-clicking it. Browsers can block the dashboard from loading its JSON file through a `file://` address.
 
-### Full project option
-
-1. Run `npm install` if dependencies are not already present.
-2. Run `npm run dev`.
-3. Open the local address shown in the terminal. The root route redirects to the dashboard.
-
 ## Pages
 
-- `index.html`: toggles between asset output and turnaround-time views, including market, creation/adaptation and delivery-band comparisons.
+- `index.html`: toggles between asset output and turnaround-time views, including market, creation/adaptation and delivery-band comparisons. The asset summary also shows a filter-aware Total Studio Score sourced from completed comparable scorecards.
 - `budget.html`: Nestlé Budget, Approved in AM, Used So Far, Studio/KOL splits, financial completeness and a USD/CHF display toggle.
+- `scorecards.html`: Nestlé Enablement and WPP Readiness scores, four equal-weight pillar diagnoses, dependency-gated fulfilment pathways, source-backed market actions, production/brand context, rule-based takeaways, readiness matrix, source-question drill-downs, fulfilment register and CSV downloads.
+- `score-validation-report.html`: source-to-score audit showing every criterion, normalized value, exclusion and category/overall calculation.
 - `data-status.html`: market-by-market data completeness.
 
 ## Data structure
 
-The local source is `public/dashboard/data/dashboard-data.json`.
+The existing reporting source is `data/dashboard-data.json`.
 
 Top-level collections:
 
@@ -44,6 +40,23 @@ Top-level collections:
 - `tat_records`: one normalized record per unique brief, including dates, classification, duration and scope class.
 
 Unknown values must be stored as `null`. Use numeric zero only when the source confirms that the value is genuinely zero.
+
+The Studio Scorecards source is `data/scorecards.json`. It contains the four category definitions, six comparable completed assessments, two special-status studios, original questions, source-cell traces, normalized values, score calculations, status-workbook evidence, production footprints, dependency rules and action pathways. Static all-studio exports are available in `data/score-validation.csv`, `data/fulfilment-register.csv` and `data/pillar-action-plan.csv`.
+
+## Studio Scorecards method
+
+- Completed assessments: Philippines, Thailand, Japan, MENA, India and Vietnam. These are sourced from the six supplied `WIP_AOA Studio Grading System_*.xlsx` workbooks.
+- Special statuses: China is a New Studio and Malaysia is a Pilot. These studios are never scored, averaged or plotted in the readiness matrix.
+- Categories: Operational Excellence & Hygiene, Strategic Thinking, Category Expertise and Production Excellence. Each assessed category has equal weight in its respective overall score.
+- Fulfilled = 1; Partially fulfilled or In progress = 0.5; Not fulfilled = 0. Blank or not assessed criteria are excluded from the denominator.
+- Nestlé Enablement and WPP Readiness are calculated separately. The combined score is secondary and exists only when both overall scores are available.
+- Key Takeaways are deterministic and rule-based. They use pillar ranking, the Nestlé/WPP imbalance, fulfilled strengths, open/unassessed requirements, missing or past-due dates, unassigned actions and explicit dependencies or blockers.
+- Every open requirement remains under its original pillar and is grouped by responsibility and control theme. Its pathway follows `Unlock` when a dependency exists, then `Build`, then `Prove` against source evidence or the original criterion.
+- Source-stated dependencies are preserved. Additional prerequisite or build-after-scope links are labelled `Rule-based`; they never change a score.
+- Brands and tracked production categories come from FY2026 asset records. They indicate production exposure only and are never treated as automatic proof of category-expertise fulfilment.
+- Unavailable evidence, action, owner, dependency or date information is displayed as `Not provided`.
+
+The Vietnam grading file is treated as a completed assessment because both its file name and worksheet identify Vietnam and all assessment inputs are populated. Its title cell still says `India`; that source ambiguity is retained in the validation report and no value is altered.
 
 ## Add a market
 
@@ -70,7 +83,7 @@ The Asset Dashboard generates four ranked takeaways directly from the active JSO
 
 ## Switch to an online source
 
-Edit `public/dashboard/js/config.js`:
+Edit `js/config.js`:
 
 ```javascript
 window.DATA_CONFIG = {
@@ -90,6 +103,7 @@ The online endpoint must return the same normalized JSON structure. When the onl
 - Completed: the subset of current tracker volume whose Project Status is `Completed`.
 - On-Track: the subset whose Project Status is `On-Track`; it is never merged into Completed.
 - Utilization Percentage: current tracker volume divided by FY scope. It appears only when both values are available and full-year filters are selected.
+- Total Studio Score: the selected market’s secondary combined score, or for All Studios the average secondary combined score across the six completed comparable assessments. The card also shows the separate Nestlé and WPP averages; China and Malaysia are excluded, and asset quarter/typology filters do not alter assessment scores.
 - Average Monthly Volume: current tracker volume divided by elapsed reporting months. It is a pace indicator, not a full-year forecast.
 - Creation and Adaptation: only quantities explicitly classified into those two categories. Localization, transcreation, compositioning, versioning and unclassified work remain separate in the source and are not shown as a headline KPI.
 - Brand volume: asset quantity grouped by `Master Brand`. Blank source values remain visible as `Unclassified`.
@@ -128,4 +142,4 @@ The online endpoint must return the same normalized JSON structure. When the onl
 
 ## Verification
 
-Run `npm run build` for the production build. The dashboard also contains downloadable CSV summaries so filtered results can be checked outside the interface.
+Serve the folder locally, then open each page through `http://localhost`; JSON loading is not reliable through a `file://` address. The dashboard contains downloadable CSV summaries so filtered results can be checked outside the interface. Use `score-validation-report.html` and `data/score-validation.csv` for the criterion-level scoring audit, and `data/pillar-action-plan.csv` for the sourced operating sequence and dependency controls.

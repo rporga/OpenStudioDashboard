@@ -33,7 +33,7 @@
       <div>
         <p class="eyebrow">AOA Content Studio Dashboard</p>
         <h1>Studio Scorecards</h1>
-        <p class="intro-copy">Compare Nestlé Enablement and WPP Readiness, inspect every assessed criterion, and track the requirements needed to strengthen each studio.</p>
+        <p class="intro-copy">Diagnose what constrains each studio, sequence source-backed actions, and trace every pillar score to the original assessment.</p>
       </div>
       <div class="updated-block"><span>Assessment date</span><strong id="scorecard-updated">—</strong></div>
     </section>
@@ -71,9 +71,27 @@
         <article class="kpi-card"><div class="kpi-top"><span>Assessment coverage</span><button class="info-button" data-tip="Assessed questions across Nestlé and WPP. Excluded source items are shown separately and never enter denominators." aria-label="About assessment coverage">i</button></div><strong id="kpi-assessment-coverage">—</strong><small id="kpi-coverage-context">Assessed criteria</small></article>
       </section>
 
+      <section class="panel executive-assessment-panel" aria-labelledby="executive-assessment-title">
+        <div class="panel-heading">
+          <div><p class="panel-kicker">Source-backed operating diagnosis</p><h2 id="executive-assessment-title">What needs to happen next</h2></div>
+          <span id="executive-status" class="analysis-status">—</span>
+        </div>
+        <div class="executive-assessment-grid">
+          <article class="executive-narrative executive-current"><span>Current state</span><p id="executive-current-state">—</p></article>
+          <article class="executive-narrative executive-outcome"><span>Target state</span><p id="executive-outcome">—</p></article>
+          <article class="executive-decision-card"><span>Immediate decision / move</span><strong id="executive-decision">—</strong><small id="executive-decision-source">Deterministic from current source actions</small></article>
+          <article class="executive-decision-card"><span>Dependency bottleneck</span><strong id="executive-bottleneck">—</strong><small>Source blocker or explicitly labelled dependency rule</small></article>
+        </div>
+        <div class="owner-next-steps">
+          <article><span>Nestlé move</span><p id="executive-nestle-move">—</p></article>
+          <article><span>WPP move</span><p id="executive-wpp-move">—</p></article>
+        </div>
+        <p id="executive-source" class="analysis-source">—</p>
+      </section>
+
       <section class="insights-panel" aria-labelledby="scorecard-insights-title">
         <div class="insights-heading">
-          <div><p class="panel-kicker">Transparent rule-based readout</p><h2 id="scorecard-insights-title">Key takeaways</h2></div>
+          <div><p class="panel-kicker">Transparent rule-based readout</p><h2 id="scorecard-insights-title">Key takeaways &amp; control points</h2></div>
           <div class="insights-actions">
             <span>Same inputs produce the same readout</span>
             <button id="regenerate-scorecard-takeaways" class="regenerate-button" type="button"><span aria-hidden="true">↻</span> Regenerate takeaways</button>
@@ -82,7 +100,7 @@
         <div id="scorecard-insights" class="insights-grid" aria-live="polite"></div>
       </section>
 
-      <section id="scorecard-category-grid" class="scorecard-category-grid" aria-label="Category scores"></section>
+      <section id="scorecard-category-grid" class="scorecard-category-grid" aria-label="Pillar diagnosis and action pathways"></section>
 
       <section class="scorecard-two-column">
         <article class="panel requirement-panel">
@@ -90,7 +108,7 @@
           <div id="strength-list" class="requirement-list"></div>
         </article>
         <article class="panel requirement-panel">
-          <div class="panel-heading"><div><p class="panel-kicker">Partially or not fulfilled</p><h2>Missing requirements</h2></div><span id="missing-count" class="legend-note"></span></div>
+          <div class="panel-heading"><div><p class="panel-kicker">Prioritized control view</p><h2>Missing requirements</h2></div><span id="missing-count" class="legend-note"></span></div>
           <div id="missing-list" class="requirement-list"></div>
         </article>
       </section>
@@ -101,7 +119,7 @@
           <span class="legend-note">X: WPP Readiness · Y: Nestlé Enablement</span>
         </div>
         <div class="matrix-chart-wrap"><canvas id="readiness-matrix" aria-label="WPP Readiness by Nestlé Enablement matrix"></canvas></div>
-        <p class="chart-note">Vietnam, China and Malaysia are excluded from the matrix because they do not have comparable completed assessments.</p>
+        <p class="chart-note">China and Malaysia are excluded from the matrix because they do not have comparable completed assessments. Vietnam is plotted from the newly supplied completed grading workbook.</p>
       </section>
 
       <section class="panel scorecard-drilldown-panel">
@@ -117,6 +135,7 @@
           <div><p class="panel-kicker">Evidence and action tracking</p><h2>Fulfilment register</h2></div>
           <div class="panel-button-group">
             <button id="download-score-summary" class="secondary-button" type="button">Download scores CSV</button>
+            <button id="download-action-plan" class="secondary-button" type="button">Download action plan CSV</button>
             <button id="download-fulfilment" class="secondary-button" type="button">Download register CSV</button>
           </div>
         </div>
@@ -126,7 +145,7 @@
             <tbody id="fulfilment-register-body"></tbody>
           </table>
         </div>
-        <div class="validation-links"><a href="./score-validation-report.html">Open full score-validation report</a><a href="./data/score-validation.csv" download>Download validation CSV</a><a href="./data/fulfilment-register.csv" download>Download all-studio register CSV</a></div>
+        <div class="validation-links"><a href="./score-validation-report.html">Open full score-validation report</a><a href="./data/score-validation.csv" download>Download validation CSV</a><a href="./data/fulfilment-register.csv" download>Download all-studio register CSV</a><a href="./data/pillar-action-plan.csv" download>Download all-studio pillar action plan</a></div>
       </section>
     </div>
   </main>

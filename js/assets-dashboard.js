@@ -3,10 +3,13 @@
   const C = window.DASHBOARD_COLORS;
   const Calc = window.DashboardCalc;
   const TAT_STORAGE_KEY = "aoa-content-studio-dashboard-tat-view";
+  const SCORECARD_DATA_URL = "./data/scorecards.json";
   const tatState = { view: "assets", metric: "median", includeLongRunning: false };
   const COMPLEXITIES = ["High", "Middle", "Low", "Unclassified"];
   let dimensionMode = "brand";
   let insightCycle = 0;
+  let scorecardData = null;
+  let scorecardLoadFailed = false;
 
   function destroyChart(id) {
     if (charts[id]) { charts[id].destroy(); delete charts[id]; }
@@ -62,6 +65,61 @@
       const { data, filters } = window.DashboardApp;
       renderInsights(data, filters, Calc.assetsByMarket(data, filters));
     });
+  }
+
+  function scorecardSummaryForMarket(payload, marketId) {
+    const studios = Array.isArray(payload?.studios) ? payload.studios : [];
+    const comparable = studios.filter((studio) => studio.comparable && studio.matrix_eligible && Number.isFinite(Number(studio.scores?.nestle?.overall)) && Number.isFinite(Number(studio.scores?.wpp?.overall)));
+    if (marketId === "all") {
+      if (!comparable.length) return { available: false, status: "No completed comparable assessments", completed: 0 };
+      const average = (values) => values.reduce((sum, value) => sum + Number(value), 0) / values.length;
+      const nestle = average(comparable.map((studio) => studio.scores.nestle.overall));
+      const wpp = average(comparable.map((studio) => studio.scores.wpp.overall));
+      const combined = average(comparable.map((studio) => studio.combined_score));
+      return { available: true, combined, nestle, wpp, completed: comparable.length, portfolio: true };
+    }
+    const studio = studios.find((item) => item.id === marketId);
+    if (!studio) return { available: false, status: "Scorecard assessment not provided", completed: 0 };
+    if (!studio.comparable || !studio.matrix_eligible) return { available: false, status: studio.assessment_status, completed: 0, portfolio: false };
+    return { available: true, combined: studio.combined_score, nestle: studio.scores.nestle.overall, wpp: studio.scores.wpp.overall, completed: 1, portfolio: false, studio: studio.name };
+  }
+
+  function renderScorecardKpi(filters) {
+    const value = document.getElementById("kpi-studio-score");
+    const context = document.getElementById("kpi-studio-score-context");
+    if (!scorecardData) {
+      value.textContent = scorecardLoadFailed ? "Not available" : "Loading…";
+      value.classList.add("is-missing");
+      context.textContent = scorecardLoadFailed ? "Scorecard data could not be loaded" : "Loading completed assessments";
+      return;
+    }
+    const summary = scorecardSummaryForMarket(scorecardData, filters.market);
+    if (!summary.available) {
+      value.textContent = "Not available";
+      value.classList.add("is-missing");
+      context.textContent = summary.status;
+      return;
+    }
+    value.textContent = Calc.formatPercent(summary.combined, 1);
+    value.classList.remove("is-missing");
+    const scope = summary.portfolio ? `${summary.completed} completed assessments` : `${summary.studio} assessment`;
+    context.textContent = `${scope} · Nestlé ${Calc.formatPercent(summary.nestle, 1)} · WPP ${Calc.formatPercent(summary.wpp, 1)}`;
+  }
+
+  async function loadScorecardData() {
+    try {
+      const response = await fetch(SCORECARD_DATA_URL, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Status ${response.status}`);
+      const payload = await response.json();
+      const portfolio = scorecardSummaryForMarket(payload, "all");
+      if (!portfolio.available || portfolio.completed !== 6) throw new Error("Comparable assessment set is incomplete");
+      scorecardData = payload;
+      scorecardLoadFailed = false;
+    } catch (error) {
+      scorecardData = null;
+      scorecardLoadFailed = true;
+    }
+    if (window.DashboardApp?.filters) renderScorecardKpi(window.DashboardApp.filters);
   }
 
   function renderKpis(data, filters, byMarket) {
@@ -132,6 +190,7 @@
       document.getElementById("kpi-utilization-context").textContent = Calc.hasValue(summary.planned) ? "Current tracker volume awaiting data" : "FY scope awaiting data";
     }
     document.getElementById("kpi-month-context").textContent = `${summary.elapsedMonths} elapsed month${summary.elapsedMonths === 1 ? "" : "s"} · delivery pace`;
+    renderScorecardKpi(filters);
   }
 
   function renderProgressChart(filters, byMarket) {
@@ -472,6 +531,7 @@
     }
   }
 
-  window.addEventListener("dashboardDataReady", () => { bindTatControls(); bindInsightControls(); bindDimensionControls(); render(); });
+  window.AssetDashboardTestHooks = { scorecardSummaryForMarket };
+  window.addEventListener("dashboardDataReady", () => { bindTatControls(); bindInsightControls(); bindDimensionControls(); render(); loadScorecardData(); });
   window.addEventListener("dashboardFiltersChanged", () => { insightCycle = 0; render(); });
 })();
